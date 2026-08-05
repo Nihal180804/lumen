@@ -1,0 +1,23 @@
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Drop area fade-in — preserves rotation, no translate involved */
+@keyframes fadeInDropArea {
+  from { opacity: 0; transform: rotate(-0.5deg) translateY(12px); }
+  to   { opacity: 1; transform: rotate(-0.5deg); }
+}
+#drop-area-container { animation: fadeInDropArea var(--t-med) var(--ease); }
+
+/* Panel entrances — slide in from the edge they're docked on (like the chat
+   drawer), preserving each card's resting tilt. */
+@keyframes fadeInLeftTL  { from { opacity: 0; transform: rotate(-1.2deg) translate(-28px, 4px); } to { opacity: 1; transform: rotate(-1.2deg); } }
+@keyframes fadeInRightTR { from { opacity: 0; transform: rotate(1deg) translate(28px, 4px); }    to { opacity: 1; transform: rotate(1deg); } }
+@keyframes fadeInLeftBL  { from { opacity: 0; transform: rotate(0.8deg) translate(-28px, 4px); }  to { opacity: 1; transform: rotate(0.8deg); } }
+@keyframes fadeInRightBR { from { opacity: 0; transform: rotate(-1deg) translate(28px, 4px); }   to { opacity: 1; transform: rotate(-1deg); } }
+
+#planner             { animation: fadeInLeftTL  var(--t-med) var(--ease); }
+#noteArea            { animation: fadeInRightTR var(--t-med) var(--ease); }
+#library { animation: fadeInLeftBL  var(--t-med) var(--ease); }
+#background-picker   { animation: fadeInRightBR var(--t-med) var(--ease); }

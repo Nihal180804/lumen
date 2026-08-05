@@ -1,0 +1,114 @@
+/* No translate() here — centering is done via JS-computed `left` in the
+   component so the tape-drag math stays honest (see useDraggable). */
+#drop-area-container {
+  position: fixed;
+  top: 90px;
+  transform: rotate(-0.5deg);
+  padding: 20px;
+  border-radius: var(--r-doodle);
+  z-index: 100;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-shade);
+  box-shadow: var(--shadow-pencil);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+#drop-area-container .tape {
+  width: 100px;
+  background: var(--tape-mint);
+  transform: translateX(-50%) rotate(-2deg);
+}
+#drop-area-container .tape:hover {
+  transform: translateX(-50%) rotate(-2deg) scale(1.06);
+}
+
+#drop-area {
+  border: 2.5px dashed var(--ink-faint);
+  border-radius: var(--r-doodle);
+  transition: border-color var(--t-fast), background var(--t-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(260px, 22vw, 420px);
+  min-height: clamp(200px, 28vh, 360px);
+  background: var(--paper-warm);
+  user-select: none;
+  position: relative;
+}
+#drop-area:hover {
+  border-color: var(--coral);
+  background: var(--paper);
+}
+
+#drop-area-content {
+  color: var(--ink-soft);
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--r-doodle-sm);
+}
+
+/* Media rendered inside the drop area */
+#drop-area-content iframe,
+#drop-area-content img,
+#drop-area-content video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: none;
+  border-radius: var(--r-doodle-sm);
+}
+
+.drop-area-browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink-soft);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.drop-area-browse:hover {
+  background: var(--butter);
+  transform: translateY(-2px) rotate(-2deg);
+}
+
+/* Corner resize handles on the inner drop-area (not the panel-resize-handle) */
+.resize-handle {
+  position: absolute;
+  background: transparent;
+  transition: background var(--t-fast);
+}
+.resize-handle:hover { background: var(--coral-soft); }
+
+.resize-e  { cursor: e-resize;  width: 6px; height: calc(100% - 16px); right: -3px; top: 8px; border-radius: 3px; }
+.resize-s  { cursor: s-resize;  height: 6px; width: calc(100% - 16px); bottom: -3px; left: 8px; border-radius: 3px; }
+.resize-se {
+  cursor: se-resize;
+  width: 14px;
+  height: 14px;
+  right: -7px;
+  bottom: -7px;
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: var(--shadow-pencil-sm);
+}

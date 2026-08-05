@@ -1,0 +1,154 @@
+/* Playback pill — bottom center, slight tilt for personality.
+   Base surface (bg/border/blur/width) comes from base.css #musicPlayer. */
+#musicPlayer {
+  bottom: var(--pill-bottom);
+  transform: translateX(-50%) rotate(-0.4deg);
+  gap: 14px;
+}
+
+/* Round control buttons (transport + utilities) */
+#musicPlayer button {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+#musicPlayer button:hover { background: var(--butter); transform: translateY(-2px) rotate(-3deg); }
+#musicPlayer button:active { transform: translateY(0) scale(0.94); }
+
+.mp-transport { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.mp-play {
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 15px !important;
+  background: var(--coral) !important;
+  color: var(--on-accent, #fff) !important;
+  border-color: var(--coral-dark) !important;
+}
+.mp-play:hover { background: var(--coral-dark) !important; }
+
+/* Center zone grows to fill — no more dead space on the left */
+.mp-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px;
+}
+.mp-trackline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mp-track-name {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp-track-counter {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+  letter-spacing: 1.5px;
+  flex-shrink: 0;
+}
+
+.mp-seekrow { display: flex; align-items: center; gap: 8px; }
+.mp-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Shared filled range slider (seek + volume) */
+.mp-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right,
+    var(--coral) var(--fill, 0%),
+    var(--paper-shade) var(--fill, 0%));
+  outline: none;
+  cursor: pointer;
+}
+.mp-seek { flex: 1; min-width: 60px; height: 7px; }
+.mp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid var(--paper);
+  box-shadow: var(--shadow-pencil-sm);
+  cursor: pointer;
+}
+.mp-range::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid var(--paper);
+  cursor: pointer;
+}
+
+/* Right zone */
+.mp-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.mp-volume { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: 14px; }
+.mp-volume .mp-range { width: 78px; }
+
+.mp-divider {
+  width: 2px;
+  align-self: stretch;
+  margin: 6px 2px;
+  background: repeating-linear-gradient(to bottom, var(--ink-faint) 0 3px, transparent 3px 6px);
+  opacity: 0.6;
+  border-radius: 2px;
+}
+
+.mp-utility { display: flex; align-items: center; gap: 4px; }
+.mp-util-btn {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 50%;
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px !important;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.mp-util-btn:hover { background: var(--butter); transform: translateY(-2px) rotate(-4deg); border-color: var(--coral-dark); }
+.mp-util-btn:active { transform: translateY(0) scale(0.94); }
+.mp-util-btn.is-active {
+  background: var(--coral) !important;
+  color: var(--on-accent, #fff);
+  border-color: var(--coral-dark);
+  transform: rotate(-4deg);
+}

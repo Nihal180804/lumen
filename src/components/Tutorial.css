@@ -1,0 +1,107 @@
+.tut-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  font-family: var(--font-body);
+}
+
+/* Full dim for centered (welcome/end) steps */
+.tut-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 24, 0.55);
+  animation: tutFade var(--t-med) var(--ease);
+}
+
+/* Spotlight: the box-shadow dims everything except the highlighted element */
+.tut-spot {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(20, 18, 24, 0.55), 0 0 0 3px var(--coral);
+  outline: 2px dashed var(--butter);
+  outline-offset: 3px;
+  pointer-events: none;
+  transition: left var(--t-med) var(--ease), top var(--t-med) var(--ease),
+              width var(--t-med) var(--ease), height var(--t-med) var(--ease);
+  animation: tutPulse 1.6s var(--ease) infinite;
+}
+@keyframes tutPulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(20, 18, 24, 0.55), 0 0 0 3px var(--coral); }
+  50%      { box-shadow: 0 0 0 9999px rgba(20, 18, 24, 0.55), 0 0 0 6px var(--coral); }
+}
+@keyframes tutFade { from { opacity: 0; } to { opacity: 1; } }
+
+.tut-arrow {
+  position: absolute;
+  z-index: 3001;
+  filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.15));
+  animation: tutFade var(--t-med) var(--ease);
+  pointer-events: none;
+}
+
+.tut-bubble {
+  position: absolute;
+  z-index: 3002;
+  width: 300px;
+  padding: 18px 18px 14px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: var(--r-doodle);
+  box-shadow: var(--shadow-pencil);
+  color: var(--ink);
+  transform: rotate(-0.6deg);
+  animation: tutPop var(--t-med) var(--ease);
+}
+@keyframes tutPop {
+  from { opacity: 0; transform: rotate(-0.6deg) translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: rotate(-0.6deg) translateY(0) scale(1); }
+}
+.tut-bubble .tape {
+  display: block;
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  width: 70px;
+  height: 20px;
+  background: var(--tape);
+  transform: rotate(-4deg);
+  border-radius: 2px 3px 2px 4px;
+}
+.tut-title {
+  margin: 4px 0 6px;
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+.tut-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.tut-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tut-progress { font-size: 11px; font-weight: 700; color: var(--ink-faint); letter-spacing: 1px; }
+.tut-btns { display: flex; gap: 6px; }
+.tut-btn {
+  padding: 7px 12px;
+  border: 1.5px solid var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.tut-btn:hover { background: var(--butter); transform: translateY(-1px); }
+.tut-btn.ghost { background: transparent; box-shadow: none; border-color: transparent; color: var(--ink-faint); }
+.tut-btn.primary { background: var(--coral); color: var(--on-accent, #fff); border-color: var(--coral-dark); }
+.tut-btn.primary:hover { background: var(--coral-dark); }

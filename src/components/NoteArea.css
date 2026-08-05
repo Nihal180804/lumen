@@ -1,0 +1,155 @@
+#noteTextArea {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 22px,
+    var(--paper-shade) 22px 23px
+  ), var(--paper);
+  color: var(--ink);
+  border: 1.5px dashed var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  padding: 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 23px;
+  resize: none; /* panel itself is resizable now */
+  box-sizing: border-box;
+  transition: border-color var(--t-fast);
+}
+#noteTextArea:focus {
+  border: 1.5px solid var(--coral);
+  outline: none;
+}
+#noteTextArea::placeholder { color: var(--ink-faint); font-family: var(--font-hand); font-size: 18px; }
+
+.note-format-toggle {
+  background: var(--paper-warm);
+  color: var(--ink);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.note-format-toggle:hover { background: var(--butter); transform: translateY(-1px); }
+.note-format-toggle.is-active { background: var(--coral); border-color: var(--coral-dark); }
+
+.note-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: var(--paper-warm);
+  border: 1.5px dashed var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  flex-shrink: 0;
+}
+.note-size-label { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.note-size-btn {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--paper-shade); background: var(--paper); color: var(--ink);
+  cursor: pointer; font-weight: 800; line-height: 1;
+}
+.note-size-btn:hover { background: var(--butter); }
+.note-size-range {
+  flex: 1;
+  -webkit-appearance: none; appearance: none;
+  height: 5px; border-radius: 999px; background: var(--paper-shade); outline: none; cursor: pointer;
+}
+.note-size-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 13px; height: 13px; border-radius: 50%; background: var(--coral); border: 2px solid var(--paper); cursor: pointer;
+}
+.note-size-val { font-size: 11px; font-weight: 700; color: var(--ink-soft); min-width: 20px; text-align: center; }
+
+.note-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.note-controls button { flex: 1; margin: 0; }
+
+/* Format toolbar — font + color */
+.note-format {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--paper-warm);
+  border: 1.5px dashed var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  flex-shrink: 0;
+}
+
+.note-font-select {
+  padding: 5px 10px;
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast);
+}
+.note-font-select:hover { background: var(--butter); }
+.note-font-select:focus { border-color: var(--coral); }
+
+.note-swatches {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.note-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--paper);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), var(--shadow-pencil-sm);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast);
+}
+.note-swatch-wheel {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.note-swatch-wheel span {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper);
+}
+.note-swatch-wheel input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.note-swatch:hover { transform: scale(1.12) rotate(-6deg); }
+.note-swatch.is-active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--ink), var(--shadow-pencil-sm);
+}

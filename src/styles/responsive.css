@@ -1,0 +1,32 @@
+/* Very small screens — squeeze the pill even harder */
+@media (max-width: 900px) {
+  .track-info { display: none; }
+  #musicPlayer audio { width: 160px; }
+}
+
+@media (max-width: 768px) {
+  #musicPlayer {
+    padding: 6px 8px;
+    gap: 4px;
+    width: calc(100% - 24px);
+    transform: translateX(-50%) rotate(0deg);
+  }
+  #musicPlayer audio { width: 120px; }
+  .mp-util-btn { width: 28px; height: 28px; font-size: 12px; }
+
+  #planner, #noteArea, #preloaded-documents, #background-picker {
+    width: calc(100% - 40px);
+    position: fixed;
+    transform: none !important;
+    animation: fadeIn var(--t-med) var(--ease) !important;
+  }
+  #drop-area-container { width: 90%; max-width: none; }
+  #drop-area { min-width: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

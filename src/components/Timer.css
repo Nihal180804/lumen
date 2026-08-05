@@ -1,0 +1,139 @@
+/* Study timer — a paper card matching the Notes/Tasks panels. */
+
+#timer {
+  position: absolute;
+  top: 18px;
+  /* Centered via left + negative margin so `transform` stays free for the
+     entrance animation and for drag (no translateX conflict → no snap). */
+  left: 50%;
+  width: clamp(220px, 20vw, 268px);
+  margin-left: calc(clamp(220px, 20vw, 268px) / -2);
+  transform: rotate(-1deg);
+  padding: 20px 18px 18px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: var(--r-doodle);
+  box-shadow: var(--shadow-pencil);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  z-index: 1200;
+  animation: timerDrop 340ms var(--ease) both;
+}
+@keyframes timerDrop {
+  from { opacity: 0; transform: rotate(-1deg) translateY(-18px) scale(0.94); }
+  to   { opacity: 1; transform: rotate(-1deg) translateY(0) scale(1); }
+}
+#timer .tape { background: var(--tape-mint); transform: translateX(-50%) rotate(2deg); }
+#timer .tape:hover { transform: translateX(-50%) rotate(2deg) scale(1.06); }
+
+/* Presets */
+.timer-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.timer-preset {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  border: 1.5px solid var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.timer-preset:hover { background: var(--butter); transform: translateY(-1px); }
+.timer-preset.is-active {
+  background: var(--coral-soft);
+  border-color: var(--coral);
+}
+.timer-preset-mins { font-size: 10px; color: var(--ink-soft); font-weight: 600; }
+
+/* Clock with a progress ring drawn via conic-gradient */
+.timer-clock {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 4px auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.timer-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--paper-warm) 78%, transparent 79% 100%),
+    conic-gradient(var(--coral) calc(var(--progress, 0) * 360deg), var(--paper-shade) 0);
+  transition: background 0.4s linear;
+}
+.timer-digits {
+  position: relative;
+  font-family: var(--font-hand);
+  font-size: 2.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 1px;
+}
+.timer-clock.is-running .timer-digits { color: var(--coral-dark); }
+.timer-clock.is-done { animation: timerPulse 0.8s var(--ease) 2; }
+.timer-clock.is-done .timer-ring {
+  background:
+    radial-gradient(closest-side, var(--paper-warm) 78%, transparent 79% 100%),
+    conic-gradient(var(--sage) 360deg);
+}
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* Controls */
+.timer-controls {
+  display: flex;
+  gap: 8px;
+}
+.timer-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: var(--r-doodle-sm);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.timer-btn:hover:not(:disabled) { background: var(--butter); transform: translateY(-1px) rotate(-1deg); }
+.timer-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.timer-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.timer-btn.primary {
+  background: var(--coral);
+  color: var(--on-accent, #fff);
+  border-color: var(--coral-dark);
+}
+.timer-btn.primary:hover:not(:disabled) { background: var(--coral-dark); }
+
+.timer-done-msg {
+  margin-top: 12px;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--sage);
+  font-weight: 700;
+}

@@ -1,0 +1,106 @@
+#planner input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border: 1.5px dashed var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  box-sizing: border-box;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+#planner input[type="text"]:hover { background: var(--paper); }
+#planner input[type="text"]:focus {
+  border: 1.5px solid var(--coral);
+  background: var(--paper);
+  outline: none;
+}
+#planner input::placeholder { color: var(--ink-faint); }
+
+/* Planner buttons — inherits base look from base.css, override for width */
+#planner button { width: calc(50% - 4px); flex-shrink: 0; }
+#planner button:last-of-type { margin-right: 0; }
+
+/* Primary "Add Task" — the most-used action gets weight */
+#planner button:first-of-type {
+  background: var(--coral);
+  color: var(--paper);
+  border-color: var(--coral-dark);
+}
+#planner button:first-of-type:hover {
+  background: var(--coral-dark);
+  color: var(--paper);
+}
+
+#tasks {
+  margin-top: 14px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+}
+#tasks > .empty-state { margin: 0; }
+
+.task {
+  background: var(--paper-warm);
+  padding: 10px 12px;
+  border-radius: var(--r-doodle-sm);
+  border: 1.5px solid transparent;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+  word-break: break-word;
+}
+.task:hover { background: var(--paper); border-color: var(--paper-shade); transform: translateX(2px); }
+
+.task input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--coral);
+}
+
+.task span {
+  flex-grow: 1;
+  margin: 0 4px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.task.completed {
+  background: var(--sage-soft);
+  border-color: var(--sage);
+}
+.task.completed span {
+  text-decoration: line-through wavy var(--sage);
+  text-decoration-thickness: 1.5px;
+  color: var(--ink-soft);
+}
+
+.task button {
+  width: auto !important;
+  padding: 4px 10px !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  background: var(--paper) !important;
+  border: 1.5px solid var(--coral-dark) !important;
+  border-radius: var(--r-doodle-sm) !important;
+  color: var(--coral-dark) !important;
+  font-weight: 700 !important;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.task button:hover {
+  background: var(--coral) !important;
+  color: var(--paper) !important;
+}

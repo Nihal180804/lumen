@@ -1,0 +1,7 @@
+/* Global styles — kept small on purpose.
+   Per-component styles live next to their component (e.g. MusicPlayer.css
+   is imported by MusicPlayer.js). */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/animations.css';
+@import './styles/responsive.css';

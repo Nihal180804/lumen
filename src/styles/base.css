@@ -1,0 +1,287 @@
+/* ========== Base ========== */
+/* Fluid root font — 12.5px at ~1024, 15px at ~1920px viewport.
+   Everything sized in rem/em automatically follows. */
+html {
+  font-size: clamp(12px, calc(10px + 0.2vw), 15px);
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-body);
+  font-weight: 500;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.App {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+  transition: background-image 0.6s ease-in-out;
+}
+
+/* Theme-aware scrim over the wallpaper. First child of .App, so every panel
+   (later siblings) paints on top. Dark themes dim the wallpaper for contrast;
+   light themes keep it transparent. */
+.app-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--app-scrim, transparent);
+  pointer-events: none;
+  z-index: 0;
+  transition: background var(--t-med) var(--ease);
+}
+
+:focus-visible {
+  outline: 3px dashed var(--coral);
+  outline-offset: 3px;
+  border-radius: var(--r-doodle-sm);
+}
+
+/* Custom scrollbars — thin & warm */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--ink-faint);
+  border-radius: 10px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); }
+
+/* ========== Music player pill (holds all controls) ========== */
+#musicPlayer {
+  position: fixed;
+  left: 50%;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  background: var(--paper-tint);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 999px;
+  box-shadow: var(--shadow-pencil);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  color: var(--ink);
+  width: min(var(--pill-max-w), calc(100% - 40px));
+  justify-content: center;
+}
+
+.mp-divider {
+  width: 2px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--ink-faint) 0 3px,
+    transparent 3px 6px
+  );
+  opacity: 0.6;
+  border-radius: 2px;
+}
+
+/* ========== Corner panels — base look ==========
+   Fixed dimensions so the 4 corners form a real grid, not a jumble.
+   overflow:visible so the tape sitting at top:-12px shows above the panel;
+   inner flex children handle their own scrolling. */
+#planner, #noteArea, #library, #background-picker {
+  position: absolute;
+  width: var(--panel-w);
+  height: var(--panel-h);
+  padding: 20px 18px 16px;
+  border-radius: var(--r-doodle);
+  background: var(--paper);
+  border: 1.5px solid var(--paper-shade);
+  color: var(--ink);
+  box-shadow: var(--shadow-pencil);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+#planner > *:not(.tape),
+#noteArea > *:not(.tape),
+#library > *:not(.tape),
+#background-picker > *:not(.tape) { min-height: 0; }
+
+/* Subtle sticky-note tint — Paper theme, LIGHT mode only. In dark mode (and
+   every other theme) these fall back to var(--paper) from the group rule above,
+   so the panels stay dark like the drop area, timer, and stats. */
+:root[data-theme="paper"][data-mode="light"] #planner  { background: #fbf6ec; }
+:root[data-theme="paper"][data-mode="light"] #noteArea { background: #fbf3e0; }
+:root[data-theme="paper"][data-mode="light"] #library  { background: #f7f2df; }
+
+/* Slight tilts — each corner leans differently, like real notes.
+   No top toolbar anymore, so panels start closer to the top. */
+#planner             { top: 18px; left: 16px; transform: rotate(-1.2deg); }
+#noteArea            { top: 18px; right: 16px; transform: rotate(1deg); }
+#library { bottom: calc(var(--pill-bottom) + 60px); left: 16px; transform: rotate(0.8deg); }
+#background-picker   { bottom: calc(var(--pill-bottom) + 60px); right: 16px; transform: rotate(-1deg); }
+
+/* Titles never shrink — content scrolls internally */
+#planner .panel-title,
+#noteArea .panel-title,
+#library .panel-title,
+#background-picker .panel-title,
+.panel-title-row { flex-shrink: 0; }
+
+#noteArea .note-controls { flex-shrink: 0; }
+
+/* ========== Tape strip ==========
+   Real element (not ::before) so it can receive mouse events for drag */
+.tape {
+  display: var(--tape-display, block);
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--tape);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 2px 3px 2px 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  cursor: grab;
+  z-index: 5;
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast);
+}
+.tape:hover {
+  transform: translateX(-50%) rotate(-3deg) scale(1.06);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+.tape:active { cursor: grabbing; }
+
+/* Per-panel tape colors */
+#noteArea .tape            { background: var(--tape-mint); transform: translateX(-50%) rotate(2deg); }
+#noteArea .tape:hover      { transform: translateX(-50%) rotate(2deg) scale(1.06); }
+#library .tape { background: var(--coral-soft); transform: translateX(-50%) rotate(-2deg); }
+#library .tape:hover { transform: translateX(-50%) rotate(-2deg) scale(1.06); }
+#background-picker .tape   { background: var(--tape); transform: translateX(-50%) rotate(3deg); }
+#background-picker .tape:hover { transform: translateX(-50%) rotate(3deg) scale(1.06); }
+
+/* ========== Shared panel bits ========== */
+.panel-title {
+  margin: 0 0 12px;
+  font-family: var(--font-hand);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.5px;
+  text-decoration: var(--title-underline, underline wavy var(--coral));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.panel-title-row .panel-title { margin: 0; }
+
+.panel-close {
+  background: var(--paper-warm);
+  color: var(--ink);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.panel-close:hover { background: var(--butter); transform: rotate(90deg); }
+
+.panel-resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, transparent 40%, var(--coral) 40% 60%, transparent 60%),
+    linear-gradient(135deg, transparent 55%, var(--coral) 55% 70%, transparent 70%),
+    var(--paper-warm);
+  border: 1.5px solid var(--paper-shade);
+  opacity: 0.7;
+  transition: opacity var(--t-fast), transform var(--t-fast);
+  z-index: 4;
+}
+.panel-resize-handle:hover { opacity: 1; transform: scale(1.15); }
+
+.empty-state {
+  flex: 1;
+  min-height: 60px;
+  padding: 18px 4px;
+  color: var(--ink-faint);
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Shared secondary-button look — used in Planner and NoteArea */
+#planner button, .note-controls button {
+  display: inline-block;
+  padding: 8px 14px;
+  margin: 8px 6px 0 0;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: var(--r-doodle-sm);
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  transition: transform var(--t-fast), background var(--t-fast);
+}
+#planner button:hover, .note-controls button:hover {
+  background: var(--butter);
+  transform: translateY(-1px) rotate(-1deg);
+}
+#planner button:active, .note-controls button:active { transform: translateY(0) scale(0.97); }
+#planner button:disabled, .note-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ========== Logo ========== */
+#topRightText {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  transform: rotate(1.5deg);
+}
+#topRightText img {
+  height: var(--logo-h);
+  width: auto;
+  /* Re-tinted per theme via --logo-filter */
+  filter: var(--logo-filter);
+  opacity: 0.85;
+  transition: opacity var(--t-fast);
+}
+#topRightText:hover img { opacity: 1; }

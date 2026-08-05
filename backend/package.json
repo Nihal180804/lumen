@@ -1,0 +1,15 @@
+{
+  "name": "bookshelf-rag-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local RAG server for Bookshelf — extracts, embeds, and answers questions over your PDFs.",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.1",
+    "pdf-parse": "^1.1.1"
+  },
+  "scripts": {
+    "rag": "node rag/server.js"
+  }
+}
