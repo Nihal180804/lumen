@@ -1,6 +1,6 @@
 {
   "name": "lumen",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "A cozy, offline-first PDF reading desk with a private local AI that answers questions about your books.",
   "author": "Nihal J",
