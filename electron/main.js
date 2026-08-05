@@ -32,12 +32,13 @@ function findFreePort(preferred) {
 }
 
 function ragServerPath() {
-  // Structure (backend/rag/server.js + backend/node_modules) is preserved in
-  // the packaged app via asarUnpack, so require() resolution still works.
+  // In the packaged app the whole backend (including its node_modules) is copied
+  // verbatim to resources/backend via electron-builder `extraResources`, so
+  // require() resolution works exactly like in dev.
   if (isDev) {
     return path.join(__dirname, '..', 'backend', 'rag', 'server.js');
   }
-  return path.join(process.resourcesPath, 'app.asar.unpacked', 'backend', 'rag', 'server.js');
+  return path.join(process.resourcesPath, 'backend', 'rag', 'server.js');
 }
 
 function waitForServer(base, timeoutMs = 20000) {

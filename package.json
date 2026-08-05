@@ -1,6 +1,6 @@
 {
   "name": "lumen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "A cozy, offline-first PDF reading desk with a private local AI that answers questions about your books.",
   "author": "Nihal J",
@@ -46,13 +46,18 @@
     },
     "files": [
       "build/**/*",
-      "electron/**/*",
-      "backend/rag/**/*",
-      "backend/package.json",
-      "backend/node_modules/**/*"
+      "electron/**/*"
     ],
-    "asarUnpack": [
-      "backend/**/*"
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!rag-data/**",
+          "!**/*.log"
+        ]
+      }
     ],
     "win": {
       "target": "nsis"
