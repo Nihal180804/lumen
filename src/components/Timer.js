@@ -5,7 +5,7 @@ import './Timer.css';
 const PRESETS = [
   { key: 'focus', label: 'Focus', mins: 25 },
   { key: 'short', label: 'Break', mins: 5 },
-  { key: 'long',  label: 'Long',  mins: 15 },
+  { key: 'long',  label: 'Long',  mins: 50 },
 ];
 
 function softChime() {

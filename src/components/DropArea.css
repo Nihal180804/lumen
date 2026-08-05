@@ -85,14 +85,15 @@
 .drop-area-browse {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
+  gap: 7px;
+  /* Fluid so it's comfortable on a big monitor but not oversized on a laptop */
+  padding: clamp(6px, 0.5vw, 9px) clamp(12px, 1.1vw, 18px);
   border-radius: 999px;
   border: 1.5px solid var(--ink-soft);
   background: var(--paper-warm);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: clamp(11.5px, 0.9vw, 13px);
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--shadow-pencil-sm);

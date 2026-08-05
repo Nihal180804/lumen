@@ -42,4 +42,4 @@ export const BACKGROUNDS = EDITION === 'lite'
   : ALL_BACKGROUNDS;
 
 // Default wallpaper — must exist in every edition, so it's one of the Lite set.
-export const DEFAULT_BACKGROUND = `${ASSET}/images/background6.gif`;
+export const DEFAULT_BACKGROUND = `${ASSET}/images/cozy-sofa.png`;

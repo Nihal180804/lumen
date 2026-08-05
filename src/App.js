@@ -41,7 +41,7 @@ function App() {
   const [volume, setVolume] = useLocalStorage('bookshelf.volume', 0.7);
   const [cookiesAccepted, setCookiesAccepted] = useLocalStorage('bookshelf.cookies', false);
   const [theme, setTheme] = useLocalStorage('bookshelf.theme', DEFAULT_THEME);
-  const [mode, setMode] = useLocalStorage('bookshelf.mode', 'light');
+  const [mode, setMode] = useLocalStorage('bookshelf.mode', 'dark');
   const [tutorialSeen, setTutorialSeen] = useLocalStorage('bookshelf.tutorialSeen', false);
   const [showTutorial, setShowTutorial] = useState(false);
 
