@@ -33,7 +33,12 @@
     "eject": "react-scripts eject",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none react-scripts start\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "react-scripts build && electron-builder",
-    "dist": "npm run electron:build"
+    "build:full": "cross-env REACT_APP_EDITION=full react-scripts build",
+    "build:lite": "cross-env REACT_APP_EDITION=lite react-scripts build && node scripts/strip-lite-assets.js",
+    "dist": "npm run dist:full",
+    "dist:full": "npm run build:full && electron-builder -c.artifactName=${productName}-${version}-full-${os}-${arch}.${ext}",
+    "dist:lite": "npm run build:lite && electron-builder -c.artifactName=${productName}-${version}-lite-${os}-${arch}.${ext}",
+    "dist:all": "npm run dist:full && npm run dist:lite"
   },
   "build": {
     "extends": null,

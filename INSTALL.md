@@ -10,7 +10,11 @@ computer (nothing gets uploaded anywhere).
 
 ## Step 1 — Install the app (1 min)
 
-1. Double-click **`Lumen-1.0.0-win-x64.exe`**.
+> There are two downloads: **Full** (all music + wallpapers) and **Lite** (a
+> smaller download with 2 tracks + 3 wallpapers — you can add the rest later from
+> the `*-pack.zip` files on the same page). Either works; grab whichever you like.
+
+1. Double-click the installer you downloaded (e.g. **`Lumen-1.0.1-full-win-x64.exe`**).
 2. Windows may show a blue **"Windows protected your PC"** box. This is normal —
    it just means the app isn't code-signed (it's a personal project, not a
    company). Click **More info → Run anyway**.

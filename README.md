@@ -50,14 +50,30 @@ conversations never leave your computer.
 
 ### Download (easiest)
 
-Grab the installer from the [**Releases**](../../releases/latest) page:
+Grab an installer from the [**Releases**](../../releases/latest) page. There are
+**two editions** — pick one:
 
-- **Windows** → `Lumen-x.y.z-win-x64.exe` (installer)
-- **Linux** → `.AppImage` / `.deb` _(build on Linux — see below)_
+| Edition | Includes | Best for |
+|---|---|---|
+| **Full** — `Lumen-x.y.z-full-win-x64.exe` | All 8 lofi tracks + all 7 wallpapers | Just want everything |
+| **Lite** — `Lumen-x.y.z-lite-win-x64.exe` | 2 tracks + 3 wallpapers (smaller download) | Smaller / slower connections |
+
+Both are the **same app** with identical features — only the bundled music &
+wallpapers differ. Lite users can add the rest anytime via the downloadable packs
+on the same release:
+
+- **`Lumen-music-pack.zip`** → the other 6 tracks
+- **`Lumen-wallpaper-pack.zip`** → the other 4 wallpapers
+
+Each zip has a short `HOW-TO-ADD.txt` — it's just Settings → *Sounds* → **Add
+music**, or Settings → *Appearance* → **+** for wallpapers.
 
 Install, launch, done. To chat with your books you'll also want a local model —
 the **[install guide](INSTALL.md)** walks a non-technical friend through the
 whole thing in ~5 minutes.
+
+> Building from source? `npm run dist:full`, `npm run dist:lite`, or
+> `npm run dist:all` (see [package.json](package.json)).
 
 > ℹ️ The installer isn't code-signed, so Windows SmartScreen shows a
 > "More info → Run anyway" prompt on first launch. That's expected for an
