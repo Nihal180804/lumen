@@ -46,7 +46,8 @@
     },
     "files": [
       "build/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "!node_modules/**/*"
     ],
     "extraResources": [
       {
