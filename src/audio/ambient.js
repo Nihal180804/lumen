@@ -1,108 +1,63 @@
-// Procedural ambient sounds via Web Audio — soft, gentle, no audio files.
-// Each sound fades in/out (never abrupt) and slowly modulates so it feels
-// natural rather than like static.
+// Built-in ambient loops — real recordings in public/audio/, looped with a
+// gentle fade in/out. Same public interface as before (AMBIENT_SOUNDS +
+// setAmbient/setAmbientVolume) so nothing else in the app has to change.
 
-let ctx = null;
-const nodes = {}; // name -> { src, gain, lfo? }
-
-function ensureCtx() {
-  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (ctx.state === 'suspended') ctx.resume();
-  return ctx;
-}
-
-// Brown noise — much softer than white noise, like distant rain/wind.
-function makeNoiseSource(c) {
-  const len = 4 * c.sampleRate;
-  const buffer = c.createBuffer(1, len, c.sampleRate);
-  const data = buffer.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < len; i++) {
-    const white = Math.random() * 2 - 1;
-    last = (last + 0.02 * white) / 1.02;
-    data[i] = last * 1.6; // gentler amplitude
-  }
-  const src = c.createBufferSource();
-  src.buffer = buffer;
-  src.loop = true;
-  return src;
-}
-
-// Per-sound tone shaping. `mod` adds a slow LFO for a living, breathing feel.
-const SHAPES = {
-  rain:  { type: 'lowpass',  freq: 1100, q: 0.4, level: 0.9,  mod: { rate: 0.08, depth: 180, on: 'freq' } },
-  wind:  { type: 'bandpass', freq: 480,  q: 0.7, level: 0.85, mod: { rate: 0.05, depth: 220, on: 'freq' } },
-  waves: { type: 'lowpass',  freq: 360,  q: 0.5, level: 1.0,  mod: { rate: 0.09, depth: 0.5, on: 'gain' } },
-};
+const ASSET = process.env.PUBLIC_URL || '';
 
 export const AMBIENT_SOUNDS = [
-  { key: 'rain',  label: 'Rain',  icon: '🌧️' },
-  { key: 'wind',  label: 'Wind',  icon: '🍃' },
-  { key: 'waves', label: 'Waves', icon: '🌊' },
+  { key: 'rain',  label: 'Rain',  icon: '🌧️', file: 'rain.mp3' },
+  { key: 'wind',  label: 'Wind',  icon: '🍃', file: 'wind.mp3' },
+  { key: 'waves', label: 'Waves', icon: '🌊', file: 'waves.mp3' },
 ];
 
-const FADE = 1.4; // seconds
+const FILE = Object.fromEntries(AMBIENT_SOUNDS.map((s) => [s.key, s.file]));
+const els = {}; // key -> { audio, target, raf }
+
+function ensure(key) {
+  if (els[key]) return els[key];
+  const audio = new Audio(`${ASSET}/audio/${FILE[key]}`);
+  audio.loop = true;
+  audio.preload = 'none'; // only fetch when first turned on
+  audio.volume = 0;
+  els[key] = { audio, target: 0, raf: 0 };
+  return els[key];
+}
+
+// Ramp volume smoothly so sounds never snap on/off.
+function fadeTo(entry, target, ms) {
+  cancelAnimationFrame(entry.raf);
+  const from = entry.audio.volume;
+  const t0 = performance.now();
+  const tick = (t) => {
+    const k = ms <= 0 ? 1 : Math.min(1, (t - t0) / ms);
+    entry.audio.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+    if (k < 1) entry.raf = requestAnimationFrame(tick);
+  };
+  entry.raf = requestAnimationFrame(tick);
+}
 
 export function setAmbient(name, on, volume = 0.5) {
-  const c = ensureCtx();
-  const target = Math.max(0, Math.min(1, volume)) * (SHAPES[name]?.level ?? 1);
-
+  if (!FILE[name]) return;
+  const entry = ensure(name);
+  const vol = Math.max(0, Math.min(1, volume));
   if (on) {
-    if (!nodes[name]) {
-      const shape = SHAPES[name] || SHAPES.rain;
-      const src = makeNoiseSource(c);
-      const filter = c.createBiquadFilter();
-      filter.type = shape.type;
-      filter.frequency.value = shape.freq;
-      filter.Q.value = shape.q;
-      const gain = c.createGain();
-      gain.gain.value = 0.0001;
-      src.connect(filter).connect(gain).connect(c.destination);
-      src.start();
-
-      // Slow modulation so it isn't a flat drone.
-      let lfo, lfoGain;
-      if (shape.mod) {
-        lfo = c.createOscillator();
-        lfo.frequency.value = shape.mod.rate;
-        lfoGain = c.createGain();
-        lfoGain.gain.value = shape.mod.depth;
-        lfo.connect(lfoGain);
-        lfoGain.connect(shape.mod.on === 'gain' ? gain.gain : filter.frequency);
-        lfo.start();
-      }
-
-      // Gentle fade-in — never sudden.
-      const now = c.currentTime;
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, target), now + FADE);
-      nodes[name] = { src, gain, lfo };
-    } else {
-      const now = c.currentTime;
-      nodes[name].gain.gain.cancelScheduledValues(now);
-      nodes[name].gain.gain.linearRampToValueAtTime(Math.max(0.0002, target), now + 0.3);
-    }
-  } else if (nodes[name]) {
-    // Fade out, then tear down.
-    const n = nodes[name];
-    const now = c.currentTime;
-    n.gain.gain.cancelScheduledValues(now);
-    n.gain.gain.setValueAtTime(Math.max(0.0002, n.gain.gain.value), now);
-    n.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-    delete nodes[name];
-    setTimeout(() => {
-      try { n.src.stop(); } catch {}
-      try { n.lfo && n.lfo.stop(); } catch {}
-      try { n.gain.disconnect(); } catch {}
-    }, 900);
+    const starting = entry.audio.paused;
+    entry.target = vol;
+    // play() can reject before a user gesture — ignore; a later toggle works.
+    if (starting) entry.audio.play().catch(() => {});
+    fadeTo(entry, vol, starting ? 1200 : 180); // slow fade-in, snappy volume tweaks
+  } else {
+    entry.target = 0;
+    fadeTo(entry, 0, 900);
+    const { audio } = entry;
+    setTimeout(() => { if (entry.target === 0 && audio.volume < 0.02) audio.pause(); }, 1000);
   }
 }
 
 export function setAmbientVolume(name, volume) {
-  if (!nodes[name] || !ctx) return;
-  const target = Math.max(0, Math.min(1, volume)) * (SHAPES[name]?.level ?? 1);
-  const now = ctx.currentTime;
-  nodes[name].gain.gain.cancelScheduledValues(now);
-  nodes[name].gain.gain.linearRampToValueAtTime(Math.max(0.0002, target), now + 0.2);
+  const entry = els[name];
+  if (!entry) return;
+  const vol = Math.max(0, Math.min(1, volume));
+  entry.target = vol;
+  fadeTo(entry, vol, 180);
 }

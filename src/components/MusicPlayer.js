@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AMBIENT_SOUNDS } from '../audio/ambient';
 import './MusicPlayer.css';
 
 const UTILITY_ITEMS = [
@@ -32,6 +33,8 @@ export function MusicPlayer({
   panels,
   toggle,
   toggleFullscreen,
+  ambientMix,
+  onToggleAmbient,
 }) {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -113,6 +116,22 @@ export function MusicPlayer({
             aria-label="Volume"
           />
         </div>
+        {/* Ambient sound quick-toggles — handy without opening Settings */}
+        <div className="mp-divider" aria-hidden="true" />
+        <div className="mp-utility mp-ambient">
+          {AMBIENT_SOUNDS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              className={`mp-util-btn${ambientMix && ambientMix[s.key] && ambientMix[s.key].on ? ' is-active' : ''}`}
+              onClick={() => onToggleAmbient && onToggleAmbient(s.key)}
+              title={`${s.label} ambience`}
+              aria-label={`${s.label} ambience`}
+              aria-pressed={!!(ambientMix && ambientMix[s.key] && ambientMix[s.key].on)}
+            >{s.icon}</button>
+          ))}
+        </div>
+
         <div className="mp-divider" aria-hidden="true" />
         <div className="mp-utility">
           {UTILITY_ITEMS.map((it) => (

@@ -346,6 +346,8 @@ function App() {
         panels={panels}
         toggle={handleToggle}
         toggleFullscreen={toggleFullscreen}
+        ambientMix={ambientMix}
+        onToggleAmbient={toggleAmbient}
       />
 
       {/* User ambient loops (built-in ones are Web-Audio, no element needed) */}
