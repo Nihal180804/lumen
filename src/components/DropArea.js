@@ -91,6 +91,7 @@ export function DropArea({ currentFile, onFileSelected, bookId, initialPage, onP
   return (
     <div
       id="drop-area-container"
+      className={currentFile ? 'has-file' : ''}
       ref={containerRef}
       style={dragStyle || { left: `calc(50% - ${size.width / 2 + 20}px)` }}
     >
@@ -98,6 +99,7 @@ export function DropArea({ currentFile, onFileSelected, bookId, initialPage, onP
       <div
         ref={dropAreaRef}
         id="drop-area"
+        className={currentFile ? 'has-file' : ''}
         style={{ width: `${size.width}px`, height: `${size.height}px` }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}

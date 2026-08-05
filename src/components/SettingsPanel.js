@@ -148,7 +148,7 @@ function AppearanceTab({ theme, setTheme, mode, setMode, wallpapers, currentWall
       )}
 
       <h2 className="settings-h2" style={{ marginTop: 24 }}>Help</h2>
-      <button className="settings-btn" onClick={() => onReplayTutorial && onReplayTutorial()}>🎓 Take the tour again</button>
+      <button className="settings-btn" style={{ marginTop: 12 }} onClick={() => onReplayTutorial && onReplayTutorial()}>🎓 Take the tour again</button>
     </div>
   );
 }

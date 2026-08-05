@@ -60,8 +60,16 @@ function App() {
   const audioRef = useRef(null);
 
   // Apply the selected theme to the document root; every panel reskins via CSS.
-  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
-  useEffect(() => { document.documentElement.dataset.mode = mode; }, [mode]);
+  // Apply theme/mode instantly: disable transitions for one frame around the
+  // swap so the whole UI doesn't slowly cross-fade (which felt sluggish).
+  const applyInstant = (fn) => {
+    const root = document.documentElement;
+    root.classList.add('no-anim');
+    fn(root);
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('no-anim')));
+  };
+  useEffect(() => { applyInstant((root) => { root.dataset.theme = theme; }); }, [theme]);
+  useEffect(() => { applyInstant((root) => { root.dataset.mode = mode; }); }, [mode]);
 
   // Migrate a wallpaper saved with the old absolute path (pre-PUBLIC_URL) so it
   // still resolves under Electron's file:// protocol in the packaged app.

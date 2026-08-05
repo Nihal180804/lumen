@@ -15,7 +15,7 @@
 }
 /* Vertical stack of pages — scroll downward through the book */
 .pdfv-vertical { overflow-y: auto; overflow-x: hidden; scroll-snap-type: y proximity; }
-.pdfv-doc { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+.pdfv-doc { display: flex; flex-direction: column; align-items: center; padding: 6px; }
 .pdfv-page {
   flex: 0 0 auto;
   scroll-snap-align: center;
