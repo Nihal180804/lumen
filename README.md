@@ -149,7 +149,7 @@ sequenceDiagram
     RAG->>LLM: prompt with retrieved passages
     LLM-->>RAG: streamed answer
     RAG-->>UI: tokens + citations (with page #)
-    UI-->>You: answer; click a citation → jump to page
+    UI-->>You: answer — click a citation to jump to its page
 ```
 
 ---
