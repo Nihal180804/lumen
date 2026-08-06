@@ -12,6 +12,14 @@ const norm = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ');
 const GAP = 18;      // px between pages
 const WINDOW = 2;    // render active page ± this many (others are placeholders)
 
+// Highlighter palette — swatch (solid) + the translucent mark colour.
+const HL_COLORS = {
+  yellow: '#f4d17b',
+  green:  '#93a67f',
+  pink:   '#e0729a',
+  blue:   '#6ea8d8',
+};
+
 export const PdfViewer = forwardRef(function PdfViewer(
   { fileUrl, initialPage = 1, onPageChange, bookId }, ref,
 ) {
@@ -24,6 +32,81 @@ export const PdfViewer = forwardRef(function PdfViewer(
   const scrollRef = useRef(null);
   const pendingRef = useRef(null);   // { snippet, page }
   const didInit = useRef(false);
+
+  // --- Persistent highlights (per book) ---
+  const [highlights, setHighlights] = useState([]);
+  const [sel, setSel] = useState(null); // { x, y } popup position for a live selection
+
+  // Load this book's saved highlights, save on change. Keyed by bookId so they
+  // reappear every time you open that PDF.
+  useEffect(() => {
+    if (!bookId) { setHighlights([]); return; }
+    try {
+      const raw = window.localStorage.getItem(`bookshelf.highlights.${bookId}`);
+      setHighlights(raw ? JSON.parse(raw) : []);
+    } catch { setHighlights([]); }
+  }, [bookId]);
+
+  // Persist on mutation only (not via an effect) — an effect keyed on
+  // `highlights` would race the load effect and blow away saved marks.
+  const persist = useCallback((next) => {
+    if (!bookId) return;
+    try { window.localStorage.setItem(`bookshelf.highlights.${bookId}`, JSON.stringify(next)); } catch { /* ignore */ }
+  }, [bookId]);
+
+  // A text selection finished — offer the colour popup near its end.
+  const onSelectUp = useCallback(() => {
+    const s = window.getSelection();
+    if (!s || s.isCollapsed || !s.rangeCount) return;
+    const range = s.getRangeAt(0);
+    const root = scrollRef.current;
+    if (!root || !root.contains(range.commonAncestorContainer)) return;
+    const rects = [...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0);
+    if (!rects.length) return;
+    const last = rects[rects.length - 1];
+    setSel({ x: Math.min(last.right, window.innerWidth - 150), y: last.bottom + 6 });
+  }, []);
+
+  // Turn the current selection into saved highlight(s) — normalised rects per
+  // page so they land correctly at any zoom, and survive reloads.
+  const addHighlight = useCallback((color) => {
+    const s = window.getSelection();
+    if (!s || !s.rangeCount) { setSel(null); return; }
+    const rects = [...s.getRangeAt(0).getClientRects()].filter((r) => r.width > 0 && r.height > 0);
+    const pageEls = [...(scrollRef.current?.querySelectorAll('.pdfv-page') || [])];
+    const byPage = {};
+    rects.forEach((r) => {
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const pe = pageEls.find((el) => {
+        const b = el.getBoundingClientRect();
+        return cx >= b.left && cx <= b.right && cy >= b.top && cy <= b.bottom;
+      });
+      if (!pe) return;
+      const b = pe.getBoundingClientRect();
+      const p = Number(pe.dataset.page);
+      (byPage[p] = byPage[p] || []).push({
+        x: (r.left - b.left) / b.width,
+        y: (r.top - b.top) / b.height,
+        w: r.width / b.width,
+        h: r.height / b.height,
+      });
+    });
+    const text = s.toString().slice(0, 140);
+    const additions = Object.keys(byPage).map((p) => ({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      page: Number(p), color, rects: byPage[p], text,
+    }));
+    if (additions.length) setHighlights((hs) => { const next = [...hs, ...additions]; persist(next); return next; });
+    s.removeAllRanges();
+    setSel(null);
+  }, [persist]);
+
+  const removeHighlight = useCallback((id) => setHighlights((hs) => {
+    const next = hs.filter((h) => h.id !== id);
+    persist(next);
+    return next;
+  }), [persist]);
 
   const pageW = baseWidth * zoom;
   const pageH = pageW * aspect;
@@ -49,6 +132,7 @@ export const PdfViewer = forwardRef(function PdfViewer(
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
+    setSel(null);
     const idx = Math.round(el.scrollTop / slotH) + 1;
     setActive((cur) => (idx !== cur && idx >= 1 && idx <= numPages ? idx : cur));
   }, [slotH, numPages]);
@@ -163,7 +247,13 @@ export const PdfViewer = forwardRef(function PdfViewer(
 
   return (
     <div className="pdfv">
-      <div className="pdfv-scroll pdfv-vertical" ref={scrollRef} onScroll={onScroll}>
+      <div
+        className="pdfv-scroll pdfv-vertical"
+        ref={scrollRef}
+        onScroll={onScroll}
+        onMouseUp={onSelectUp}
+        onMouseDown={() => setSel(null)}
+      >
         <Document
           file={fileUrl}
           onLoadSuccess={onDocLoad}
@@ -193,11 +283,49 @@ export const PdfViewer = forwardRef(function PdfViewer(
                 ) : (
                   <div className="pdfv-placeholder">{p}</div>
                 )}
+
+                {/* Saved highlights for this page (click a mark to remove) */}
+                <div className="pdfv-hl-layer">
+                  {highlights.filter((h) => h.page === p).map((h) => (
+                    h.rects.map((r, i) => (
+                      <div
+                        key={`${h.id}_${i}`}
+                        className="pdfv-hl-mark"
+                        style={{
+                          left: `${r.x * 100}%`,
+                          top: `${r.y * 100}%`,
+                          width: `${r.w * 100}%`,
+                          height: `${r.h * 100}%`,
+                          background: HL_COLORS[h.color] || HL_COLORS.yellow,
+                        }}
+                        title="Click to remove highlight"
+                        onClick={() => removeHighlight(h.id)}
+                      />
+                    ))
+                  ))}
+                </div>
               </div>
             );
           })}
         </Document>
       </div>
+
+      {sel && (
+        <div className="pdfv-sel-pop" style={{ left: `${sel.x}px`, top: `${sel.y}px` }}>
+          {Object.keys(HL_COLORS).map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="pdfv-sel-color"
+              style={{ background: HL_COLORS[c] }}
+              title={`Highlight ${c}`}
+              // preventDefault keeps the text selection alive until we read it
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => addHighlight(c)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="pdfv-bar">
         <button onClick={() => { const p = clampPage(active - 1); setActive(p); scrollToPage(p); }} disabled={active <= 1} title="Previous page">◀</button>

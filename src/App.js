@@ -159,7 +159,7 @@ function App() {
   const deleteBook = useCallback((book) => {
     if (!window.confirm('Remove this book from your library?')) return;
     fetch(`${RAG_BASE}/api/rag/books/${book.id}`, { method: 'DELETE' }).then(() => {
-      try { localStorage.removeItem(`bookshelf.chat.${book.id}`); } catch {}
+      try { localStorage.removeItem(`bookshelf.chat.${book.id}`); localStorage.removeItem(`bookshelf.highlights.${book.id}`); } catch {}
       setOpenBookId((id) => (id === book.id ? null : id));
       setCurrentFile((cf) => (cf && cf.name === book.name ? null : cf));
       fetchBooks();
