@@ -32,7 +32,7 @@ function softChime() {
   } catch { /* no audio — silent is fine */ }
 }
 
-export function Timer({ onClose, onComplete }) {
+export function Timer({ onClose, onComplete, today, streak }) {
   const panelRef = useRef(null);
   const tapeRef = useRef(null);
   const intervalRef = useRef(null);
@@ -138,6 +138,17 @@ export function Timer({ onClose, onComplete }) {
       </div>
 
       {done && <div className="timer-done-msg">time's up ~ nice work ✿</div>}
+
+      <div className="timer-today" aria-label="Today's reading">
+        <span className="timer-today-label">Today ☀</span>
+        <span className="timer-today-stats">
+          <span><b>{(today && today.minutes) || 0}</b> min</span>
+          <span className="timer-today-dot">·</span>
+          <span><b>{(today && today.pomodoros) || 0}</b> pomos</span>
+          <span className="timer-today-dot">·</span>
+          <span>🔥 <b>{streak || 0}</b></span>
+        </span>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useResizable } from '../hooks/useResizable';
 import { fluidSize } from '../utils/fluid';
 import './Library.css';
 
-export function Library({ books, openBookId, onOpen, onDelete, onAddBook }) {
+export function Library({ books, openBookId, onOpen, onDelete, onAddBook, onClose }) {
   const panelRef = useRef(null);
   const tapeRef = useRef(null);
   const resizeRef = useRef(null);
@@ -22,7 +22,10 @@ export function Library({ books, openBookId, onOpen, onDelete, onAddBook }) {
   return (
     <div id="library" ref={panelRef} style={panelStyle}>
       <span className="tape" ref={tapeRef} title="Drag to move · double-click to reset" />
-      <h3 className="panel-title">Library 📚</h3>
+      <div className="panel-title-row">
+        <h3 className="panel-title">Library 📚</h3>
+        <button type="button" className="panel-close" onClick={onClose} aria-label="Hide library">×</button>
+      </div>
 
       <div className="lib-list">
         {books.length === 0 && (

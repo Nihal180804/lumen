@@ -10,7 +10,6 @@ import { Library } from './components/Library';
 import { DropArea } from './components/DropArea';
 import { CookiePopup } from './components/CookiePopup';
 import { Timer } from './components/Timer';
-import { StatsCard } from './components/StatsCard';
 import SettingsPanel from './components/SettingsPanel';
 import { Tutorial } from './components/Tutorial';
 import ChatPanel from './components/ChatPanel';
@@ -29,7 +28,6 @@ const emptyPanels = {
   timer: false,
   chat: false,
   settings: false,
-  stats: false,
 };
 
 function App() {
@@ -348,6 +346,7 @@ function App() {
         toggleFullscreen={toggleFullscreen}
         ambientMix={ambientMix}
         onToggleAmbient={toggleAmbient}
+        onAmbientVol={setAmbientVol}
       />
 
       {/* User ambient loops (built-in ones are Web-Audio, no element needed) */}
@@ -368,13 +367,27 @@ function App() {
 
       {panels.noteArea && <NoteArea notes={notes} setNotes={setNotes} />}
       {panels.planner && <Planner tasks={tasks} setTasks={setTasks} />}
-      {panels.library && (
+      {/* Library rides with the reader: a left-edge tab appears only while
+          reading, and it hides away like the chat drawer. */}
+      {panels.dropArea && !panels.library && (
+        <button
+          className="lib-handle"
+          onClick={() => togglePanel('library')}
+          title="Open library"
+          aria-label="Open library"
+        >
+          <span className="lib-handle-icon">📚</span>
+          <span className="lib-handle-label">Library</span>
+        </button>
+      )}
+      {panels.dropArea && panels.library && (
         <Library
           books={books}
           openBookId={openBookId}
           onOpen={openBook}
           onDelete={deleteBook}
           onAddBook={handleFileSelected}
+          onClose={() => togglePanel('library')}
         />
       )}
       {panels.dropArea && (
@@ -386,8 +399,14 @@ function App() {
           onPageChange={onReaderPage}
         />
       )}
-      {panels.timer && <Timer onClose={() => togglePanel('timer')} onComplete={addPomodoro} />}
-      {panels.stats && <StatsCard today={statsToday} streak={streak} onClose={() => togglePanel('stats')} />}
+      {panels.timer && (
+        <Timer
+          onClose={() => togglePanel('timer')}
+          onComplete={addPomodoro}
+          today={statsToday}
+          streak={streak}
+        />
+      )}
 
       {panels.settings && (
         <SettingsPanel

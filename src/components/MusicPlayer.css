@@ -128,6 +128,49 @@
   border-radius: 2px;
 }
 
+/* Ambience popover — a mini mixer that pops up above the pill */
+.mp-amb { position: relative; display: flex; align-items: center; }
+.mp-amb-pop {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: -6px;
+  width: 234px;
+  padding: 12px 12px 10px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-shade);
+  border-radius: var(--r-doodle-sm);
+  box-shadow: var(--shadow-pencil);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  z-index: 1600;
+  animation: ambPop var(--t-fast) var(--ease);
+}
+.mp-amb-pop::after {
+  content: ''; position: absolute; top: 100%; right: 14px;
+  border: 7px solid transparent; border-top-color: var(--paper-shade);
+}
+@keyframes ambPop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.mp-amb-title {
+  font-family: var(--font-hand); font-size: 1.2rem; color: var(--ink);
+  margin: 0 2px 8px; line-height: 1;
+}
+.mp-amb-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.mp-amb-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  flex: 0 0 92px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--paper-shade); border-radius: 999px;
+  background: var(--paper-warm); color: var(--ink-soft);
+  font-family: var(--font-body); font-size: 12px; font-weight: 700;
+  cursor: pointer; box-shadow: var(--shadow-pencil-sm);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.mp-amb-toggle:hover { background: var(--butter); color: var(--ink); }
+.mp-amb-toggle.is-on { background: var(--coral); color: var(--on-accent, #fff); border-color: var(--coral-dark); }
+.mp-amb-ico { font-size: 14px; line-height: 1; }
+.mp-amb-vol { flex: 1; height: 6px; }
+.mp-amb-vol:disabled { opacity: 0.4; cursor: default; }
+
 .mp-utility { display: flex; align-items: center; gap: 4px; }
 .mp-util-btn {
   background: var(--paper);

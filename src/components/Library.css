@@ -74,3 +74,38 @@
   transition: background var(--t-fast), transform var(--t-fast);
 }
 .lib-browse:hover { background: var(--coral-dark); transform: translateY(-1px); }
+
+/* Left-edge pull-tab — appears only while reading, opens the library drawer
+   (mirrors the chat drawer's tab on the right edge). */
+.lib-handle {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1490;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1.5px solid var(--paper-shade);
+  border-left: none;
+  border-radius: 0 var(--r-doodle-sm) var(--r-doodle-sm) 0;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--shadow-pencil-sm);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  transition: transform var(--t-fast) var(--ease), background var(--t-fast);
+}
+.lib-handle:hover { background: var(--butter); transform: translateY(-50%) translateX(3px); }
+.lib-handle-icon { font-size: 18px; line-height: 1; }
+.lib-handle-label {
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  font-weight: 700;
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+}

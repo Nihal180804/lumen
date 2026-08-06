@@ -137,3 +137,21 @@
   color: var(--sage);
   font-weight: 700;
 }
+
+/* Today's reading — folded into the timer card */
+.timer-today {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px dashed var(--paper-shade);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.timer-today-label { font-family: var(--font-hand); font-size: 1.05rem; color: var(--ink-soft); line-height: 1; }
+.timer-today-stats {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--ink-soft);
+}
+.timer-today-stats b { color: var(--coral-dark); font-family: var(--font-hand); font-size: 1.3rem; }
+.timer-today-dot { color: var(--ink-faint); }

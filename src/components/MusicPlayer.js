@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AMBIENT_SOUNDS } from '../audio/ambient';
 import './MusicPlayer.css';
 
+// Library lives with the reader (its own tab); Today is folded into the Timer.
 const UTILITY_ITEMS = [
   { key: 'planner',   icon: '📅', label: 'Tasks' },
   { key: 'dropArea',  icon: '📂', label: 'Files' },
   { key: 'noteArea',  icon: '📝', label: 'Notes' },
-  { key: 'library',   icon: '📚', label: 'Library' },
   { key: 'timer',     icon: '⏳', label: 'Timer' },
-  { key: 'stats',     icon: '☀', label: 'Today' },
   { key: 'chat',      icon: '💬', label: 'Chat' },
   { key: 'settings',  icon: '⚙️', label: 'Settings' },
 ];
@@ -35,9 +34,22 @@ export function MusicPlayer({
   toggleFullscreen,
   ambientMix,
   onToggleAmbient,
+  onAmbientVol,
 }) {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [ambOpen, setAmbOpen] = useState(false);
+  const ambRef = useRef(null);
+
+  // Close the ambience popover when clicking elsewhere.
+  useEffect(() => {
+    if (!ambOpen) return undefined;
+    const onDown = (e) => { if (ambRef.current && !ambRef.current.contains(e.target)) setAmbOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [ambOpen]);
+
+  const anyAmbient = AMBIENT_SOUNDS.some((s) => ambientMix && ambientMix[s.key] && ambientMix[s.key].on);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
@@ -116,20 +128,49 @@ export function MusicPlayer({
             aria-label="Volume"
           />
         </div>
-        {/* Ambient sound quick-toggles — handy without opening Settings */}
+        {/* Ambience — one button opens a mini mixer popover */}
         <div className="mp-divider" aria-hidden="true" />
-        <div className="mp-utility mp-ambient">
-          {AMBIENT_SOUNDS.map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              className={`mp-util-btn${ambientMix && ambientMix[s.key] && ambientMix[s.key].on ? ' is-active' : ''}`}
-              onClick={() => onToggleAmbient && onToggleAmbient(s.key)}
-              title={`${s.label} ambience`}
-              aria-label={`${s.label} ambience`}
-              aria-pressed={!!(ambientMix && ambientMix[s.key] && ambientMix[s.key].on)}
-            >{s.icon}</button>
-          ))}
+        <div className="mp-amb" ref={ambRef}>
+          <button
+            type="button"
+            className={`mp-util-btn${anyAmbient ? ' is-active' : ''}`}
+            onClick={() => setAmbOpen((o) => !o)}
+            title="Ambient sounds"
+            aria-label="Ambient sounds"
+            aria-expanded={ambOpen}
+          >🌧️</button>
+          {ambOpen && (
+            <div className="mp-amb-pop" role="dialog" aria-label="Ambient sounds">
+              <div className="mp-amb-title">Ambience</div>
+              {AMBIENT_SOUNDS.map((s) => {
+                const st = (ambientMix && ambientMix[s.key]) || {};
+                const vol = st.vol == null ? 0.5 : st.vol;
+                return (
+                  <div className="mp-amb-row" key={s.key}>
+                    <button
+                      type="button"
+                      className={`mp-amb-toggle${st.on ? ' is-on' : ''}`}
+                      onClick={() => onToggleAmbient && onToggleAmbient(s.key)}
+                      aria-pressed={!!st.on}
+                      title={st.on ? `Turn off ${s.label}` : `Turn on ${s.label}`}
+                    >
+                      <span className="mp-amb-ico">{s.icon}</span>
+                      <span className="mp-amb-name">{s.label}</span>
+                    </button>
+                    <input
+                      className="mp-range mp-amb-vol"
+                      type="range" min="0" max="1" step="0.05"
+                      value={vol}
+                      onChange={(e) => onAmbientVol && onAmbientVol(s.key, Number(e.target.value))}
+                      style={{ '--fill': `${vol * 100}%` }}
+                      aria-label={`${s.label} volume`}
+                      disabled={!st.on}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="mp-divider" aria-hidden="true" />
