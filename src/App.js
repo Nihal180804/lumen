@@ -69,12 +69,18 @@ function App() {
   useEffect(() => { applyInstant((root) => { root.dataset.theme = theme; }); }, [theme]);
   useEffect(() => { applyInstant((root) => { root.dataset.mode = mode; }); }, [mode]);
 
-  // Migrate a wallpaper saved with the old absolute path (pre-PUBLIC_URL) so it
-  // still resolves under Electron's file:// protocol in the packaged app.
+  // Keep the saved wallpaper valid: normalise old absolute paths, and if it
+  // points at a built-in wallpaper that isn't available (removed, or not in
+  // this edition), fall back to the default so the desk never goes blank.
   useEffect(() => {
-    if (typeof background === 'string' && background.startsWith('/images/')) {
-      setBackground(`${process.env.PUBLIC_URL}${background}`);
+    if (typeof background !== 'string') return;
+    let bg = background;
+    if (bg.startsWith('/images/')) bg = `${process.env.PUBLIC_URL}${bg}`;
+    const m = bg.match(/[/]images[/]([^/?#]+)$/); // a built-in wallpaper file
+    if (m && !BACKGROUNDS.some((b) => b.file === decodeURIComponent(m[1]))) {
+      bg = DEFAULT_BACKGROUND;
     }
+    if (bg !== background) setBackground(bg);
   }, [background, setBackground]);
 
   // First launch → show the tour once (after a beat so the UI is in place).
@@ -86,7 +92,17 @@ function App() {
     return undefined;
   }, [tutorialSeen]);
 
-  const closeTutorial = useCallback(() => { setShowTutorial(false); setTutorialSeen(true); }, [setTutorialSeen]);
+  const closeTutorial = useCallback(() => {
+    setShowTutorial(false);
+    setTutorialSeen(true);
+    // If the AI isn't set up yet, land them on the AI settings to finish.
+    fetch(`${RAG_BASE}/api/rag/ollama`).then((r) => r.json()).then((o) => {
+      if (!o.running || !(o.models || []).length) {
+        setSettingsTab('ai');
+        setPanels((p) => ({ ...p, settings: true }));
+      }
+    }).catch(() => {});
+  }, [setTutorialSeen]);
   const replayTutorial = useCallback(() => { setPanels(emptyPanels); setShowTutorial(true); }, []);
 
   // --- Reading stats ---

@@ -224,6 +224,8 @@ function AiTab() {
   const [available, setAvailable] = useState([]);
   const [newModel, setNewModel] = useState('');
   const [saving, setSaving] = useState(false);
+  const [ollama, setOllama] = useState({ running: true, models: [] });
+  const [pull, setPull] = useState(null); // { name, percent, status, error }
 
   const load = () => fetch(`${RAG_BASE}/api/rag/config`).then((r) => r.json()).then(setConfig)
     .catch(() => setConfig({ error: 'Could not reach the AI helper on ' + RAG_BASE }));
@@ -231,7 +233,42 @@ function AiTab() {
 
   const refreshModels = () => fetch(`${RAG_BASE}/api/rag/models`).then((r) => r.json())
     .then((j) => setAvailable(j.models || [])).catch(() => setAvailable([]));
-  useEffect(() => { if (config && !config.error) refreshModels(); /* eslint-disable-next-line */ }, [config && config.mode]);
+  const checkOllama = () => fetch(`${RAG_BASE}/api/rag/ollama`).then((r) => r.json()).then(setOllama).catch(() => setOllama({ running: false, models: [] }));
+  useEffect(() => {
+    if (config && !config.error) { refreshModels(); if (config.mode === 'local') checkOllama(); }
+    /* eslint-disable-next-line */
+  }, [config && config.mode]);
+
+  // Download an Ollama model with live progress (no terminal needed).
+  const pullModel = async (name) => {
+    const model = (name || '').trim();
+    if (!model || pull) return;
+    setPull({ name: model, percent: 0, status: 'starting…' });
+    try {
+      const r = await fetch(`${RAG_BASE}/api/rag/pull`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }),
+      });
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        // eslint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const events = buf.split('\n\n'); buf = events.pop();
+        for (const evt of events) {
+          const ev = evt.split('\n').find((l) => l.startsWith('event: '))?.slice(7);
+          const data = evt.split('\n').find((l) => l.startsWith('data: '))?.slice(6);
+          if (!data) continue;
+          let j; try { j = JSON.parse(data); } catch { continue; }
+          if (ev === 'progress') setPull((p) => ({ ...p, status: j.status, percent: j.percent ?? p?.percent ?? 0 }));
+          else if (ev === 'done') { setPull(null); refreshModels(); checkOllama(); }
+          else if (ev === 'error') setPull((p) => ({ ...(p || { name: model }), error: j.error }));
+        }
+      }
+    } catch (e) { setPull((p) => ({ ...(p || { name: model }), error: e.message })); }
+  };
 
   const update = (path, value) => setConfig((prev) => {
     const c = JSON.parse(JSON.stringify(prev));
@@ -286,6 +323,12 @@ function AiTab() {
         </select>
       </label>
 
+      {m === 'local' && (
+        ollama.running
+          ? <div className="ai-status ok">✓ Ollama connected — download models right here, no terminal needed.</div>
+          : <div className="ai-status warn">Ollama isn’t running. <a href="https://ollama.com/download" target="_blank" rel="noreferrer">Install Ollama</a>, launch it, then reopen this panel.</div>
+      )}
+
       <label className="settings-field-label">{m === 'local' ? 'Ollama URL' : 'API base URL'}
         <input className="settings-field" value={section.baseUrl} onChange={(e) => update(`${m}.baseUrl`, e.target.value)} />
       </label>
@@ -295,9 +338,27 @@ function AiTab() {
         </label>
       )}
       <label className="settings-field-label">Embedding model
-        <input list="settingsModels" className="settings-field" value={section.embedModel} onChange={(e) => update(`${m}.embedModel`, e.target.value)} />
+        <div className="settings-modelbar" style={{ marginTop: 4 }}>
+          <input list="settingsModels" className="settings-field" style={{ flex: 1 }} value={section.embedModel} onChange={(e) => update(`${m}.embedModel`, e.target.value)} />
+          {m === 'local' && ollama.running && !ollama.models.includes(section.embedModel) && (
+            <button className="settings-btn small" onClick={() => pullModel(section.embedModel)} disabled={!!pull} title="Download this model">⬇ Get</button>
+          )}
+        </div>
       </label>
       <datalist id="settingsModels">{available.map((x) => <option key={x} value={x} />)}</datalist>
+
+      {pull && (
+        <div className="ai-pull">
+          {pull.error ? (
+            <span className="ai-pull-err">Download failed: {pull.error} <button onClick={() => setPull(null)}>×</button></span>
+          ) : (
+            <>
+              <div className="ai-pull-label">Downloading <strong>{pull.name}</strong> — {pull.status} {pull.percent != null ? `${pull.percent}%` : ''}</div>
+              <div className="ai-pull-bar"><div style={{ width: `${pull.percent || 0}%` }} /></div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="settings-modelbar">
         <button className="settings-btn small" onClick={refreshModels}>↻ Refresh models</button>
@@ -311,6 +372,11 @@ function AiTab() {
           <li key={name} className="settings-list-row">
             <button className={`settings-radio${section.chatModel === name ? ' is-active' : ''}`} onClick={() => setActive(name)} aria-label={`Use ${name}`} />
             <span className="settings-list-name">{name}</span>
+            {m === 'local' && ollama.running && (
+              ollama.models.includes(name)
+                ? <span className="settings-list-tag">installed</span>
+                : <button className="settings-btn small" onClick={() => pullModel(name)} disabled={!!pull} title="Download">⬇ Get</button>
+            )}
             <button className="settings-list-del" onClick={() => removeModel(name)} title="Remove">×</button>
           </li>
         ))}
@@ -319,6 +385,9 @@ function AiTab() {
         <input list="settingsModels" className="settings-field" style={{ flex: 1 }} placeholder="add a model name…" value={newModel}
           onChange={(e) => setNewModel(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addModel(); }} />
         <button className="settings-btn primary" onClick={addModel} disabled={!newModel.trim()}>Add</button>
+        {m === 'local' && ollama.running && (
+          <button className="settings-btn small" onClick={() => pullModel(newModel)} disabled={!newModel.trim() || !!pull} title="Download this model">⬇</button>
+        )}
       </div>
 
       <div className="settings-actions">

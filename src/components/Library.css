@@ -80,7 +80,9 @@
 .lib-handle {
   position: fixed;
   left: 0;
-  top: 50%;
+  /* Sits a touch above centre so it can stack with a left-docked chat tab
+     (which sits below centre) without overlapping. */
+  top: calc(50% - 54px);
   transform: translateY(-50%);
   z-index: 1490;
   display: flex;

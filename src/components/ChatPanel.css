@@ -53,6 +53,9 @@
 .chat-handle.left {
   right: auto;
   left: 0;
+  /* Sits below centre so it stacks with the library tab (above centre) instead
+     of overlapping it on the left edge. */
+  top: calc(50% + 54px);
   border-left: none;
   border-right: 1.5px solid var(--paper-shade);
   border-radius: 0 var(--r-doodle-sm) var(--r-doodle-sm) 0;

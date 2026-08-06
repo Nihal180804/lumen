@@ -126,6 +126,61 @@ app.get('/api/rag/models', async (req, res) => {
   }
 });
 
+// Is Ollama reachable? (so the UI can guide "install Ollama" vs "pull a model")
+app.get('/api/rag/ollama', async (req, res) => {
+  const cfg = loadConfig();
+  try {
+    const r = await fetch(`${cfg.local.baseUrl}/api/tags`);
+    const j = r.ok ? await r.json() : { models: [] };
+    res.json({ running: r.ok, models: (j.models || []).map((m) => m.name) });
+  } catch {
+    res.json({ running: false, models: [] });
+  }
+});
+
+// Download an Ollama model from inside the app — streams progress over SSE.
+app.post('/api/rag/pull', async (req, res) => {
+  const { model } = req.body || {};
+  if (!model) return res.status(400).json({ error: 'model required' });
+  const cfg = loadConfig();
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders?.();
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  try {
+    const r = await fetch(`${cfg.local.baseUrl}/api/pull`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: model, stream: true }),
+    });
+    if (!r.ok) { send('error', { error: `Ollama responded ${r.status}` }); return res.end(); }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let j; try { j = JSON.parse(line); } catch { continue; }
+        const percent = j.total && j.completed ? Math.round((j.completed / j.total) * 100) : null;
+        send('progress', { status: j.status || '', percent });
+        if (j.status === 'success') { send('done', {}); return res.end(); }
+        if (j.error) { send('error', { error: j.error }); return res.end(); }
+      }
+    }
+    send('done', {});
+    res.end();
+  } catch (e) {
+    send('error', { error: 'Cannot reach Ollama. Is it installed and running?' });
+    res.end();
+  }
+});
+
 // --- Media routes: user-added wallpapers + music ---
 const MEDIA_TYPES = new Set(['wallpapers', 'music', 'ambient']);
 
