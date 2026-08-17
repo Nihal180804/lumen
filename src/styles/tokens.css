@@ -56,7 +56,6 @@
   --panel-h:      clamp(220px, 26vh, 340px);
   /* Pill now holds everything, so it needs more room */
   --pill-max-w:   clamp(620px, 65vw, 940px);
-  --audio-w:      clamp(160px, 14vw, 260px);
   --logo-h:       clamp(32px, 2.5vw, 48px);
   --pill-bottom:  clamp(10px, 1.4vh, 20px);
 }

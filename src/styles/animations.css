@@ -29,4 +29,3 @@
 #planner             { animation: fadeInLeftTL  var(--t-med) var(--ease); }
 #noteArea            { animation: fadeInRightTR var(--t-med) var(--ease); }
 #library { animation: fadeInLeftBL  var(--t-med) var(--ease); }
-#background-picker   { animation: fadeInRightBR var(--t-med) var(--ease); }

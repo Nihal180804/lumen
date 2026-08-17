@@ -92,7 +92,7 @@ body, html {
    Fixed dimensions so the 4 corners form a real grid, not a jumble.
    overflow:visible so the tape sitting at top:-12px shows above the panel;
    inner flex children handle their own scrolling. */
-#planner, #noteArea, #library, #background-picker {
+#planner, #noteArea, #library {
   position: absolute;
   width: var(--panel-w);
   height: var(--panel-h);
@@ -110,8 +110,7 @@ body, html {
 }
 #planner > *:not(.tape),
 #noteArea > *:not(.tape),
-#library > *:not(.tape),
-#background-picker > *:not(.tape) { min-height: 0; }
+#library > *:not(.tape) { min-height: 0; }
 
 /* Subtle sticky-note tint — Paper theme, LIGHT mode only. In dark mode (and
    every other theme) these fall back to var(--paper) from the group rule above,
@@ -125,13 +124,11 @@ body, html {
 #planner             { top: 18px; left: 16px; transform: rotate(-1.2deg); }
 #noteArea            { top: 18px; right: 16px; transform: rotate(1deg); }
 #library { bottom: calc(var(--pill-bottom) + 60px); left: 16px; transform: rotate(0.8deg); }
-#background-picker   { bottom: calc(var(--pill-bottom) + 60px); right: 16px; transform: rotate(-1deg); }
 
 /* Titles never shrink — content scrolls internally */
 #planner .panel-title,
 #noteArea .panel-title,
 #library .panel-title,
-#background-picker .panel-title,
 .panel-title-row { flex-shrink: 0; }
 
 #noteArea .note-controls { flex-shrink: 0; }
@@ -165,8 +162,6 @@ body, html {
 #noteArea .tape:hover      { transform: translateX(-50%) rotate(2deg) scale(1.06); }
 #library .tape { background: var(--coral-soft); transform: translateX(-50%) rotate(-2deg); }
 #library .tape:hover { transform: translateX(-50%) rotate(-2deg) scale(1.06); }
-#background-picker .tape   { background: var(--tape); transform: translateX(-50%) rotate(3deg); }
-#background-picker .tape:hover { transform: translateX(-50%) rotate(3deg) scale(1.06); }
 
 /* ========== Shared panel bits ========== */
 .panel-title {

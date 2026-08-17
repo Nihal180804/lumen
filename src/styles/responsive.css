@@ -14,7 +14,7 @@
   #musicPlayer audio { width: 120px; }
   .mp-util-btn { width: 28px; height: 28px; font-size: 12px; }
 
-  #planner, #noteArea, #preloaded-documents, #background-picker {
+  #planner, #noteArea, #library {
     width: calc(100% - 40px);
     position: fixed;
     transform: none !important;
