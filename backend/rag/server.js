@@ -4,6 +4,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
 const pdfParse = require('pdf-parse');
 const { chunk, chunkPages } = require('./chunker');
 const { Store } = require('./store');
@@ -34,6 +35,13 @@ const DEFAULT_CONFIG = {
   chunkSize: 800,
   chunkOverlap: 100,
   topK: 6,
+  // Retrieval quality knobs (see /api/rag/chat):
+  // rerank: 'auto' | true | false. 'auto' turns reranking on when it's cheap —
+  // always in API mode, and in local mode only when a GPU is detected (an extra
+  // LLM call per question is painful on a CPU-only laptop).
+  rerank: 'auto',
+  rerankPool: 20,     // how many candidates to pull before reranking
+  rewriteFollowups: true, // fold conversation context into the search query
 };
 
 // --- Custom media (user-added wallpapers + music) -------------------------
@@ -69,6 +77,43 @@ function saveConfig(cfg) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
+// --- GPU detection --------------------------------------------------------
+// Reranking is worth it only when inference is fast. Remote APIs always are;
+// local Ollama is fast only on a GPU. We probe the common vendor CLIs once and
+// cache the answer for the process lifetime.
+function probe(cmd, args) {
+  return new Promise((resolve) => {
+    try {
+      execFile(cmd, args, { timeout: 3000, windowsHide: true }, (err, stdout) => {
+        resolve(!err && !!(stdout || '').trim());
+      });
+    } catch { resolve(false); }
+  });
+}
+
+let gpuPromise;
+function hasGpu() {
+  // NVIDIA (Windows + Linux), then AMD ROCm. nvidia-smi/rocm-smi exit non-zero
+  // or aren't found when there's no supported GPU.
+  if (!gpuPromise) {
+    gpuPromise = (async () => {
+      if (await probe('nvidia-smi', ['-L'])) return true;
+      if (await probe('rocm-smi', ['--showid'])) return true;
+      return false;
+    })();
+  }
+  return gpuPromise;
+}
+
+// Resolve the effective rerank decision from config + hardware.
+async function rerankEnabled(cfg) {
+  if (cfg.rerank === true) return true;
+  if (cfg.rerank === false) return false;
+  // 'auto' (or anything unexpected): remote APIs are fast; local needs a GPU.
+  if (cfg.mode !== 'local') return true;
+  return hasGpu();
+}
+
 const store = new Store(DATA_DIR);
 const app = express();
 app.use(cors());
@@ -76,11 +121,13 @@ app.use(express.json({ limit: '5mb' }));
 
 const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } });
 
-app.get('/api/rag/config', (req, res) => {
+app.get('/api/rag/config', async (req, res) => {
   const c = loadConfig();
   res.json({
     ...c,
     api: { ...c.api, apiKey: c.api.apiKey ? '••••••' : '' },
+    gpu: await hasGpu(),              // detected once, cached
+    rerankActive: await rerankEnabled(c), // what 'auto' resolves to right now
   });
 });
 
@@ -273,7 +320,7 @@ app.post('/api/rag/upload', upload.single('file'), async (req, res) => {
     const BATCH = cfg.mode === 'local' ? 48 : 64;
     for (let i = 0; i < chunks.length; i += BATCH) {
       const batch = chunks.slice(i, i + BATCH);
-      const vecs = await embed(batch.map(c => c.text), cfg);
+      const vecs = await embed(batch.map(c => c.text), cfg, 'document');
       embeddings.push(...vecs);
     }
     const withEmb = chunks.map((c, i) => ({ ...c, embedding: embeddings[i] }));
@@ -294,15 +341,64 @@ app.post('/api/rag/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// Fold conversation context into a standalone search query, so a follow-up
+// like "what about the second one?" retrieves the right passages instead of
+// embedding a pronoun. Cheap non-streaming LLM call; falls back to the raw
+// question on any hiccup.
+async function rewriteFollowup(question, history, cfg) {
+  if (!history.length) return question;
+  const recent = history.slice(-6)
+    .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n');
+  const messages = [
+    { role: 'system', content: 'Rewrite the user\'s latest question into a single, standalone search query that spells out anything implied by the conversation (pronouns, "it", "that one", etc.). Reply with ONLY the query text — no quotes, no preamble. If it already stands alone, return it unchanged.' },
+    { role: 'user', content: `Conversation so far:\n${recent}\n\nLatest question: ${question}\n\nStandalone search query:` },
+  ];
+  try {
+    const out = await chat(messages, cfg);
+    const q = (out || '').trim().replace(/^["']|["']$/g, '').split('\n')[0].trim();
+    return q || question;
+  } catch { return question; }
+}
+
+// LLM reranker: score a candidate pool and keep the k most relevant. One extra
+// (non-streaming) call; falls back to the retrieval order if parsing fails.
+async function rerankHits(question, hits, cfg, k) {
+  if (hits.length <= k) return hits;
+  const list = hits.map((h, i) => `[${i}] ${h.text.slice(0, 500)}`).join('\n\n');
+  const messages = [
+    { role: 'system', content: 'You rank passages by how useful they are for answering a question. Respond with ONLY a JSON array of the passage numbers, most useful first, e.g. [3,0,7]. No other text.' },
+    { role: 'user', content: `Question: ${question}\n\nPassages:\n${list}\n\nJSON array of indices, best first:` },
+  ];
+  let order;
+  try {
+    const out = await chat(messages, cfg);
+    const m = (out || '').match(/\[[\d,\s]*\]/);
+    order = m ? JSON.parse(m[0]) : null;
+  } catch { order = null; }
+  if (!Array.isArray(order)) return hits.slice(0, k);
+  const picked = [];
+  for (const i of order) if (hits[i] && !picked.includes(hits[i])) picked.push(hits[i]);
+  for (const h of hits) if (!picked.includes(h)) picked.push(h); // safety net
+  return picked.slice(0, k);
+}
+
 app.post('/api/rag/chat', async (req, res) => {
   try {
     const { bookId, question, history = [] } = req.body || {};
     if (!bookId || !question) return res.status(400).json({ error: 'bookId and question required' });
     const cfg = loadConfig();
 
-    const [qVec] = await embed([question], cfg);
-    const hits = store.search(bookId, qVec, cfg.topK);
+    const searchQuery = cfg.rewriteFollowups
+      ? await rewriteFollowup(question, history, cfg)
+      : question;
+
+    const doRerank = await rerankEnabled(cfg);
+    const [qVec] = await embed([searchQuery], cfg, 'query');
+    const poolSize = doRerank ? Math.max(cfg.rerankPool, cfg.topK) : cfg.topK;
+    let hits = store.search(bookId, qVec, searchQuery, poolSize);
     if (!hits.length) return res.status(404).json({ error: 'this book has not finished indexing yet' });
+    if (doRerank) hits = await rerankHits(searchQuery, hits, cfg, cfg.topK);
 
     const context = hits.map(h => h.text).join('\n\n---\n\n');
     const system = `You are a warm, concise reading companion who has read the user's book. Answer their question using ONLY the passages provided below. Write naturally, in your own words, as if you simply know the book. Never mention "passages", "excerpts", "chunks", "context", or numbers/labels for them — just answer. If the answer isn't in what you were given, say so plainly and kindly.`;
@@ -348,4 +444,7 @@ app.listen(PORT, () => {
   } else {
     console.log(`  api=${cfg.api.baseUrl}  embed=${cfg.api.embedModel}  chat=${cfg.api.chatModel}  key=${cfg.api.apiKey ? 'set' : 'MISSING'}`);
   }
+  Promise.all([hasGpu(), rerankEnabled(cfg)]).then(([gpu, rr]) => {
+    console.log(`  gpu=${gpu ? 'yes' : 'no'}  rerank=${cfg.rerank}${cfg.rerank === 'auto' ? ` (→ ${rr ? 'on' : 'off'})` : ''}`);
+  });
 });

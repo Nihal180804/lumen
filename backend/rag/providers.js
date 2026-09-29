@@ -122,10 +122,23 @@ async function apiChat(messages, cfg, onToken) {
   return full;
 }
 
-async function embed(texts, config) {
+// nomic-embed-text (and other nomic models) are trained with task prefixes:
+// documents get "search_document: " and queries get "search_query: ". Sending
+// them makes retrieval noticeably sharper. Other models ignore/­don't need this,
+// so we only prefix when the embed model looks like a nomic one.
+function withPrefix(texts, config, kind) {
+  const model = (config.mode === 'local' ? config.local.embedModel : config.api.embedModel) || '';
+  if (!/nomic/i.test(model)) return texts;
+  const prefix = kind === 'query' ? 'search_query: ' : 'search_document: ';
+  return texts.map(t => prefix + t);
+}
+
+// kind is 'document' (default, for stored chunks) or 'query' (for a question).
+async function embed(texts, config, kind = 'document') {
+  const prepared = withPrefix(texts, config, kind);
   return config.mode === 'local'
-    ? ollamaEmbed(texts, config.local)
-    : apiEmbed(texts, config.api);
+    ? ollamaEmbed(prepared, config.local)
+    : apiEmbed(prepared, config.api);
 }
 
 async function chat(messages, config, onToken) {

@@ -9,11 +9,43 @@ any OpenAI-compatible API — switch modes from the chat panel's ⚙ button.
    `POST /api/rag/upload`.
 2. The server extracts text with `pdf-parse`, chunks it (~800 chars, 100 overlap),
    embeds each chunk, and stores everything under `backend/rag-data/`.
-3. Questions from the chat panel hit `POST /api/rag/chat`, which embeds the
-   question, does cosine-similarity search over the selected book's chunks,
-   builds a grounded prompt, and streams the answer back over SSE with citations.
+3. Questions from the chat panel hit `POST /api/rag/chat`, which rewrites the
+   question against the conversation, runs **hybrid retrieval** (semantic +
+   keyword) over the selected book's chunks, **reranks** the candidates, builds
+   a grounded prompt, and streams the answer back over SSE with citations.
 
 No vector DB required — flat JSON on disk. Fine up to a few hundred books.
+
+## Retrieval quality
+
+Three knobs in `config.json` (all on by default) shape how passages are found:
+
+| Key                | Default  | What it does                                                              |
+| ------------------ | -------- | ------------------------------------------------------------------------- |
+| `rewriteFollowups` | `true`   | Folds chat context into the search query so follow-ups retrieve correctly |
+| `rerank`           | `'auto'` | LLM-reranks a larger candidate pool down to `topK` before answering       |
+| `rerankPool`       | `20`     | How many candidates hybrid search pulls before reranking                  |
+
+`rerank` accepts `'auto'` (default), `true`, or `false`. **`'auto'` turns
+reranking on only where it's cheap:** always in API mode, and in local (Ollama)
+mode only when a GPU is detected (via `nvidia-smi` / `rocm-smi`). On a CPU-only
+laptop it stays off so questions don't pay for an extra model call. Set it to
+`true`/`false` to override. `GET /api/rag/config` reports the detected `gpu`
+and the resolved `rerankActive`.
+
+Retrieval is **hybrid**: dense cosine similarity is fused (reciprocal-rank
+fusion) with BM25 keyword scoring, so exact terms — names, acronyms, formulas —
+aren't lost to embedding blur. Embeddings from `nomic-embed-text` also get the
+model's `search_document:` / `search_query:` task prefixes automatically.
+
+> On CPU-only local (Ollama) setups these extra model calls are slow, so
+> `rerank: 'auto'` already keeps reranking off there. `rewriteFollowups` still
+> adds one call per question — set it to `false` in `config.json` if answers
+> feel slow. Hybrid search and the embedding prefixes stay active either way.
+>
+> **Books indexed before this change should be re-uploaded** so their chunks are
+> embedded with the `search_document:` prefix; mixing prefixed queries against
+> unprefixed chunks slightly degrades results.
 
 ## Install
 
@@ -115,8 +147,10 @@ Chat stream events:
   clicked.
 - **No auth.** Anyone hitting `:5001` reads and writes books. Fine for
   localhost use; put behind auth before exposing.
-- **In-process cosine search.** Fast enough for hundreds of books. If you go
-  bigger, swap `store.search` for an actual vector DB (LanceDB, Qdrant,
-  Mongo Atlas Vector Search).
-- **No re-ranking.** For higher quality, add a re-ranker between retrieval
-  and generation (e.g. `bge-reranker` locally, or Cohere Rerank via API).
+- **In-process hybrid search.** Cosine + BM25 fused with RRF, recomputed per
+  query. Fast enough for hundreds of books. If you go bigger, swap
+  `store.search` for an actual vector DB (LanceDB, Qdrant, Mongo Atlas Vector
+  Search) and a persistent keyword index.
+- **LLM reranking reuses the chat model.** Works anywhere, but costs an extra
+  call. A dedicated cross-encoder (`bge-reranker` locally, or Cohere Rerank via
+  API) would be faster and sharper if you want to invest.
