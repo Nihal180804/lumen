@@ -5,6 +5,35 @@ import './ChatPanel.css';
 const RAG_BASE = (typeof window !== 'undefined' && window.bookshelf && window.bookshelf.ragBase)
   || process.env.REACT_APP_RAG_BASE || 'http://localhost:5001';
 
+// Matches the server sentinel for "search across every book".
+const ALL_BOOKS = '__all__';
+
+// Render an assistant answer, turning inline [n] markers into clickable jumps
+// to the cited passage. Numbers without a matching citation stay plain text.
+function AnswerText({ content, citations, onJump }) {
+  const byLabel = new Map((citations || []).map((c) => [String(c.label), c]));
+  const parts = (content || '').split(/(\[\d+\])/g);
+  return (
+    <div>
+      {parts.map((part, i) => {
+        const m = /^\[(\d+)\]$/.exec(part);
+        const cite = m && byLabel.get(m[1]);
+        if (cite) {
+          return (
+            <sup
+              key={i}
+              className="chat-cite-mark"
+              title={cite.page ? `Go to page ${cite.page}` : 'Show this passage'}
+              onClick={() => onJump(cite)}
+            >[{m[1]}]</sup>
+          );
+        }
+        return <React.Fragment key={i}>{part}</React.Fragment>;
+      })}
+    </div>
+  );
+}
+
 export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
   const [books, setBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState('');
@@ -200,7 +229,7 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
         <div className="chat-title-row">
           <h3 className="panel-title">Chat ✦</h3>
           <div className="chat-actions">
-            <button className="chat-icon" title="Delete this book" onClick={deleteBook} disabled={!selectedBook}>🗑</button>
+            <button className="chat-icon" title="Delete this book" onClick={deleteBook} disabled={!selectedBook || selectedBook === ALL_BOOKS}>🗑</button>
             <button
               className="chat-icon"
               title={`Move chat to the ${side === 'left' ? 'right' : 'left'}`}
@@ -214,6 +243,7 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
 
         <select className="chat-book" value={selectedBook} onChange={e => setSelectedBook(e.target.value)}>
           {books.length === 0 && <option value="">(drop a PDF to add a book)</option>}
+          {books.length > 1 && <option value={ALL_BOOKS}>✦ All books</option>}
           {books.map(b => <option key={b.id} value={b.id}>{b.name.replace(/\.pdf$/i, '')}</option>)}
         </select>
 
@@ -247,25 +277,40 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
               : 'Drop a PDF into the Files panel, then ask a question here ~'}
           </div>
         )}
-        {messages.map((m, i) => (
+        {messages.map((m, i) => {
+          const jump = (c) => onCite && onCite(c.bookId || selectedBook, c.snippet, c.page);
+          return (
           <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'bot'}`}>
-            <div>{m.content || (m.role === 'assistant' && busy && i === messages.length - 1 ? '…' : '')}</div>
+            {m.role === 'user'
+              ? <div>{m.content}</div>
+              : <AnswerText
+                  content={m.content || (busy && i === messages.length - 1 ? '…' : '')}
+                  citations={m.citations}
+                  onJump={jump}
+                />}
             {m.citations && m.citations.length > 0 && (
               <details className="chat-cite">
-                <summary>📖 from the book · click to find in the page</summary>
+                <summary>📖 sources · click to find in the page</summary>
                 {m.citations.map(c => (
                   <button
-                    key={c.idx}
+                    key={c.label ?? c.idx}
                     type="button"
                     className="chat-cite-item"
-                    onClick={() => onCite && onCite(selectedBook, c.snippet, c.page)}
+                    onClick={() => jump(c)}
                     title={c.page ? `Go to page ${c.page}` : 'Show this passage in the PDF'}
-                  >{c.page ? <span className="chat-cite-page">p.{c.page}</span> : null}{c.snippet}…</button>
+                  >
+                    <span className="chat-cite-num">[{c.label}]</span>
+                    {c.page ? <span className="chat-cite-page">p.{c.page}</span> : null}
+                    {selectedBook === ALL_BOOKS && c.bookName
+                      ? <span className="chat-cite-book">{c.bookName.replace(/\.pdf$/i, '')}</span> : null}
+                    {c.snippet}…
+                  </button>
                 ))}
               </details>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="chat-inputrow">

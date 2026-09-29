@@ -258,6 +258,35 @@
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
+.chat-cite-num {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 800;
+  font-style: normal;
+  color: var(--coral);
+  font-variant-numeric: tabular-nums;
+}
+.chat-cite-book {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--coral-soft);
+  color: var(--ink);
+  font-weight: 700;
+  font-style: normal;
+}
+/* Inline [n] markers inside an answer — click to jump to the source page. */
+.chat-cite-mark {
+  cursor: pointer;
+  color: var(--coral);
+  font-weight: 700;
+  font-size: 0.72em;
+  padding: 0 1px;
+  vertical-align: super;
+  transition: color var(--t-fast);
+}
+.chat-cite-mark:hover { color: var(--ink); text-decoration: underline; }
 
 /* ---- input row ---- */
 .chat-inputrow {

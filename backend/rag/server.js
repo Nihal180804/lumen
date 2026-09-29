@@ -13,6 +13,9 @@ const { embed, chat } = require('./providers');
 // RAG_DATA_DIR is set by the Electron shell to the OS user-data dir so the
 // index is writable when the app is installed. Falls back to a local folder
 // for the standalone `npm run rag` workflow.
+// Sentinel bookId meaning "search across every indexed book" (see /api/rag/chat).
+const ALL_BOOKS = '__all__';
+
 const DATA_DIR = process.env.RAG_DATA_DIR || path.join(__dirname, '..', 'rag-data');
 const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -396,13 +399,24 @@ app.post('/api/rag/chat', async (req, res) => {
     const doRerank = await rerankEnabled(cfg);
     const [qVec] = await embed([searchQuery], cfg, 'query');
     const poolSize = doRerank ? Math.max(cfg.rerankPool, cfg.topK) : cfg.topK;
-    let hits = store.search(bookId, qVec, searchQuery, poolSize);
-    if (!hits.length) return res.status(404).json({ error: 'this book has not finished indexing yet' });
+    const allBooks = bookId === ALL_BOOKS;
+    let hits = allBooks
+      ? store.searchAll(qVec, searchQuery, poolSize)
+      : store.search(bookId, qVec, searchQuery, poolSize);
+    if (!hits.length) {
+      return res.status(404).json({ error: allBooks
+        ? 'no books have finished indexing yet'
+        : 'this book has not finished indexing yet' });
+    }
     if (doRerank) hits = await rerankHits(searchQuery, hits, cfg, cfg.topK);
 
-    const context = hits.map(h => h.text).join('\n\n---\n\n');
-    const system = `You are a warm, concise reading companion who has read the user's book. Answer their question using ONLY the passages provided below. Write naturally, in your own words, as if you simply know the book. Never mention "passages", "excerpts", "chunks", "context", or numbers/labels for them — just answer. If the answer isn't in what you were given, say so plainly and kindly.`;
-    const user = `Passages from the book:\n\n${context}\n\n---\n\nQuestion: ${question}`;
+    // Number the passages so the model can cite them inline as [1], [2], …
+    // and the UI can turn those markers into clickable jumps to the source.
+    const context = hits
+      .map((h, i) => `[${i + 1}]${allBooks && h.bookName ? ` (from "${h.bookName.replace(/\.pdf$/i, '')}")` : ''}\n${h.text}`)
+      .join('\n\n---\n\n');
+    const system = `You are a warm, concise reading companion who has read the user's book${allBooks ? 's' : ''}. Answer using ONLY the numbered passages below. Write naturally, as if you simply know the material — don't talk about "passages" or "excerpts". After each sentence or claim, add the bracketed number(s) of the passage it came from, like [1] or [2][3]. Only cite numbers that appear below. If the answer isn't in what you were given, say so plainly and kindly.`;
+    const user = `Passages:\n\n${context}\n\n---\n\nQuestion: ${question}`;
     const messages = [
       { role: 'system', content: system },
       ...history,
@@ -414,8 +428,9 @@ app.post('/api/rag/chat', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
 
-    res.write(`event: citations\ndata: ${JSON.stringify(hits.map(h => ({
-      idx: h.idx, snippet: h.text.slice(0, 240), page: h.page,
+    res.write(`event: citations\ndata: ${JSON.stringify(hits.map((h, i) => ({
+      label: i + 1, idx: h.idx, snippet: h.text.slice(0, 240), page: h.page,
+      bookId: h.bookId, bookName: h.bookName,
     })))}\n\n`);
 
     await chat(messages, cfg, (tok) => {

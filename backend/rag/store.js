@@ -96,11 +96,11 @@ class Store {
     return JSON.parse(fs.readFileSync(p, 'utf8'));
   }
 
-  // Hybrid retrieval: dense (cosine) + sparse (BM25), fused with RRF. Pass
-  // queryText to enable the keyword half; omit it to fall back to pure vector
-  // search. Returns the top k chunks with a fused `score`.
-  search(id, queryEmbedding, queryText = '', k = 6) {
-    const chunks = this.loadChunks(id);
+  // Hybrid retrieval over a given chunk array: dense (cosine) + sparse (BM25),
+  // fused with RRF. Pass queryText to enable the keyword half; omit it to fall
+  // back to pure vector search. Carries through each chunk's bookId/bookName if
+  // present (set by searchAll), so callers can attribute cross-book hits.
+  _rank(chunks, queryEmbedding, queryText, k) {
     if (!chunks.length) return [];
 
     const semRank = chunks
@@ -125,9 +125,30 @@ class Store {
 
     const fused = rrfMerge(rankings);
     return [...fused.entries()]
-      .map(([i, score]) => ({ idx: chunks[i].idx, text: chunks[i].text, page: chunks[i].page, score }))
+      .map(([i, score]) => {
+        const c = chunks[i];
+        const hit = { idx: c.idx, text: c.text, page: c.page, score };
+        if (c.bookId) { hit.bookId = c.bookId; hit.bookName = c.bookName; }
+        return hit;
+      })
       .sort((a, b) => b.score - a.score)
       .slice(0, k);
+  }
+
+  // Search within a single book.
+  search(id, queryEmbedding, queryText = '', k = 6) {
+    return this._rank(this.loadChunks(id), queryEmbedding, queryText, k);
+  }
+
+  // Search across the whole library at once. Every chunk from every book is
+  // pooled so BM25 statistics and ranking are global; hits are tagged with the
+  // book they came from.
+  searchAll(queryEmbedding, queryText = '', k = 6) {
+    const all = [];
+    for (const b of this.listBooks()) {
+      for (const c of this.loadChunks(b.id)) all.push({ ...c, bookId: b.id, bookName: b.name });
+    }
+    return this._rank(all, queryEmbedding, queryText, k);
   }
 }
 

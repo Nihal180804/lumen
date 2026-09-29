@@ -11,8 +11,14 @@ any OpenAI-compatible API — switch modes from the chat panel's ⚙ button.
    embeds each chunk, and stores everything under `backend/rag-data/`.
 3. Questions from the chat panel hit `POST /api/rag/chat`, which rewrites the
    question against the conversation, runs **hybrid retrieval** (semantic +
-   keyword) over the selected book's chunks, **reranks** the candidates, builds
-   a grounded prompt, and streams the answer back over SSE with citations.
+   keyword) over the selected book's chunks — or across **every** book when
+   `bookId` is `"__all__"` — **reranks** the candidates, builds a grounded
+   prompt, and streams the answer back over SSE with **inline `[n]` citations**.
+
+The answer is numbered against the retrieved passages, so each `[n]` in the
+reply is clickable and jumps the reader to that passage's source page (and, in
+all-books mode, to the right book). Citations carry `{label, page, bookId,
+bookName, snippet}`.
 
 No vector DB required — flat JSON on disk. Fine up to a few hundred books.
 
@@ -131,20 +137,16 @@ from `books.json` and the two files in `chunks/`.
 | DELETE | `/api/rag/books/:id`     | Delete a book (PDF + chunks + metadata)      |
 | GET    | `/api/rag/pdf/:id`       | Stream the stored PDF                        |
 | POST   | `/api/rag/upload`        | multipart `file` — extract, chunk, embed     |
-| POST   | `/api/rag/chat`          | `{bookId, question, history}` — SSE stream   |
+| POST   | `/api/rag/chat`          | `{bookId, question, history}` — SSE stream. `bookId: "__all__"` searches the whole library |
 
 Chat stream events:
-- `event: citations` — sources used (chunk indices + snippets + scores)
+- `event: citations` — sources used (`{label, page, bookId, bookName, snippet}`)
 - `event: token` — one token
 - `event: done` — end of turn
 - `event: error` — server-side error, then stream ends
 
 ## Known limitations / next steps
 
-- **Page numbers, not chunk indices, would be nicer.** `pdf-parse` gives text
-  in reading order but not per-page. Swap in `pdfjs-dist` and tag each chunk
-  with its source page, then jump the iframe to `#page=N` when a citation is
-  clicked.
 - **No auth.** Anyone hitting `:5001` reads and writes books. Fine for
   localhost use; put behind auth before exposing.
 - **In-process hybrid search.** Cosine + BM25 fused with RRF, recomputed per
