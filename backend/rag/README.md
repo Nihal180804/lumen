@@ -118,10 +118,10 @@ The frontend only ever sees a masked value.
 ```
 backend/rag-data/
   config.json            # provider settings (contains api key if using API mode)
-  books.json             # [{id, name, uploadedAt, chunkCount, pages}]
+  books.json             # [{id, name, uploadedAt, chunkCount, pages, outline}]
   chunks/
     <bookId>.pdf         # the raw PDF
-    <bookId>.json        # [{idx, text, embedding: [...]}]
+    <bookId>.json        # [{idx, text, page, embedding: [...]}]
 ```
 
 Delete a book from the chat panel with the 🗑 button, or just delete the row
@@ -138,12 +138,32 @@ from `books.json` and the two files in `chunks/`.
 | GET    | `/api/rag/pdf/:id`       | Stream the stored PDF                        |
 | POST   | `/api/rag/upload`        | multipart `file` — extract, chunk, embed     |
 | POST   | `/api/rag/chat`          | `{bookId, question, history}` — SSE stream. `bookId: "__all__"` searches the whole library |
+| POST   | `/api/rag/summarize`     | `{bookId, from?, to?, label?}` — SSE stream of a summary over a page range |
+| POST   | `/api/rag/quiz`          | `{bookId, from?, to?, count?}` — JSON `{questions: [{q, a}]}` |
+| GET    | `/api/rag/hardware`      | Detected `{ramGB, gpu, gpuName, vramMB, recommend}` for the model picker |
 
 Chat stream events:
 - `event: citations` — sources used (`{label, page, bookId, bookName, snippet}`)
 - `event: token` — one token
 - `event: done` — end of turn
 - `event: error` — server-side error, then stream ends
+
+## Study tools
+
+`/api/rag/summarize` and `/api/rag/quiz` work over a **page range** (`from`/`to`,
+inclusive; omit both for the whole book). At upload, the PDF's outline
+(bookmarks) is extracted via the pdf.js bundled with `pdf-parse` and stored on
+the book as `outline: [{title, page, level}]` — the chat panel turns that into a
+chapter picker, and falls back to page-number inputs when a PDF has no outline.
+
+Summaries are **map-reduce**: a range that fits in one block is summarized in a
+single streamed pass; larger ranges are summarized block-by-block, then a final
+combined summary is streamed. Quizzes ask the model for `Q:`/`A:` pairs and are
+parsed tolerantly.
+
+`/api/rag/hardware` reports RAM (from `os`) and GPU (name + VRAM via
+`nvidia-smi`, or `rocm-smi` for AMD) and suggests chat models that will run well
+— e.g. `qwen2.5:7b` on an 8 GB+ GPU, `llama3.2:1b` on a small CPU-only machine.
 
 ## Known limitations / next steps
 

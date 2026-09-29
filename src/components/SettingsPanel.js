@@ -226,10 +226,14 @@ function AiTab() {
   const [saving, setSaving] = useState(false);
   const [ollama, setOllama] = useState({ running: true, models: [] });
   const [pull, setPull] = useState(null); // { name, percent, status, error }
+  const [hw, setHw] = useState(null); // { ramGB, gpu, gpuName, vramMB, recommend }
 
   const load = () => fetch(`${RAG_BASE}/api/rag/config`).then((r) => r.json()).then(setConfig)
     .catch(() => setConfig({ error: 'Could not reach the AI helper on ' + RAG_BASE }));
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    fetch(`${RAG_BASE}/api/rag/hardware`).then((r) => r.json()).then(setHw).catch(() => {});
+  }, []);
 
   const refreshModels = () => fetch(`${RAG_BASE}/api/rag/models`).then((r) => r.json())
     .then((j) => setAvailable(j.models || [])).catch(() => setAvailable([]));
@@ -296,8 +300,8 @@ function AiTab() {
   const section = config[m];
   const models = section.chatModels || [];
 
-  const addModel = () => {
-    const name = newModel.trim();
+  const addModel = (preset) => {
+    const name = (typeof preset === 'string' ? preset : newModel).trim();
     if (!name || models.includes(name)) { setNewModel(''); return; }
     const next = JSON.parse(JSON.stringify(config));
     next[m].chatModels = [...models, name];
@@ -327,6 +331,39 @@ function AiTab() {
         ollama.running
           ? <div className="ai-status ok">✓ Ollama connected — download models right here, no terminal needed.</div>
           : <div className="ai-status warn">Ollama isn’t running. <a href="https://ollama.com/download" target="_blank" rel="noreferrer">Install Ollama</a>, launch it, then reopen this panel.</div>
+      )}
+
+      {m === 'local' && hw && hw.recommend && (
+        <div className="ai-reco">
+          <div className="ai-reco-head">
+            🤖 Recommended for your machine
+            <span className="ai-reco-hw">
+              {hw.gpu
+                ? `${hw.gpuName || 'GPU'}${hw.vramMB ? ` · ${Math.round(hw.vramMB / 1024)} GB VRAM` : ''}`
+                : `No GPU detected · ${hw.ramGB} GB RAM`}
+            </span>
+          </div>
+          <ul className="settings-list">
+            {hw.recommend.chat.map((rec) => {
+              const installed = ollama.running && ollama.models.includes(rec.model);
+              const listed = models.includes(rec.model);
+              return (
+                <li key={rec.model} className="settings-list-row">
+                  <span className="settings-list-name">{rec.model}</span>
+                  <span className="ai-reco-note">{rec.note}</span>
+                  {installed
+                    ? <span className="settings-list-tag">installed</span>
+                    : ollama.running
+                      ? <button className="settings-btn small" onClick={() => pullModel(rec.model)} disabled={!!pull} title="Download this model">⬇ Get</button>
+                      : null}
+                  {!listed && (
+                    <button className="settings-btn small" onClick={() => addModel(rec.model)} title="Add to your chat models">+ Add</button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       <label className="settings-field-label">{m === 'local' ? 'Ollama URL' : 'API base URL'}

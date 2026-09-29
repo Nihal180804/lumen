@@ -4,11 +4,13 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 const { execFile } = require('child_process');
 const pdfParse = require('pdf-parse');
 const { chunk, chunkPages } = require('./chunker');
 const { Store } = require('./store');
 const { embed, chat } = require('./providers');
+const { extractOutline } = require('./outline');
 
 // RAG_DATA_DIR is set by the Electron shell to the OS user-data dir so the
 // index is writable when the app is installed. Falls back to a local folder
@@ -94,18 +96,61 @@ function probe(cmd, args) {
   });
 }
 
-let gpuPromise;
-function hasGpu() {
-  // NVIDIA (Windows + Linux), then AMD ROCm. nvidia-smi/rocm-smi exit non-zero
-  // or aren't found when there's no supported GPU.
-  if (!gpuPromise) {
-    gpuPromise = (async () => {
-      if (await probe('nvidia-smi', ['-L'])) return true;
-      if (await probe('rocm-smi', ['--showid'])) return true;
-      return false;
+// Run a command and return trimmed stdout, or null if it fails / isn't found.
+function probeOut(cmd, args) {
+  return new Promise((resolve) => {
+    try {
+      execFile(cmd, args, { timeout: 3000, windowsHide: true }, (err, stdout) => {
+        resolve(err ? null : ((stdout || '').trim() || null));
+      });
+    } catch { resolve(null); }
+  });
+}
+
+let hwPromise;
+// Detect RAM + GPU once and cache. { ramGB, gpu, gpuName, vramMB }.
+function detectHardware() {
+  if (!hwPromise) {
+    hwPromise = (async () => {
+      const ramGB = Math.round(os.totalmem() / 1e9);
+      // NVIDIA: get name + total VRAM in one query.
+      const nv = await probeOut('nvidia-smi',
+        ['--query-gpu=name,memory.total', '--format=csv,noheader,nounits']);
+      if (nv) {
+        const [name, mem] = nv.split('\n')[0].split(',').map((s) => s.trim());
+        return { ramGB, gpu: true, gpuName: name || 'NVIDIA GPU', vramMB: parseInt(mem, 10) || null };
+      }
+      if (await probe('rocm-smi', ['--showid'])) {
+        return { ramGB, gpu: true, gpuName: 'AMD GPU (ROCm)', vramMB: null };
+      }
+      return { ramGB, gpu: false, gpuName: null, vramMB: null };
     })();
   }
-  return gpuPromise;
+  return hwPromise;
+}
+
+async function hasGpu() {
+  return (await detectHardware()).gpu;
+}
+
+// Suggest chat models that will actually run well on the detected hardware.
+function recommendModels(hw) {
+  const v = hw.vramMB || 0;
+  let chat;
+  if (hw.gpu && v >= 16000) {
+    chat = [['qwen2.5:14b', 'top quality — fits your VRAM'], ['llama3.1:8b', 'fast, excellent all-rounder']];
+  } else if (hw.gpu && v >= 8000) {
+    chat = [['qwen2.5:7b', 'best balance for your GPU'], ['llama3.1:8b', 'strong all-rounder'], ['llama3.2:3b', 'snappy']];
+  } else if (hw.gpu && v >= 4000) {
+    chat = [['llama3.2:3b', 'fits your GPU comfortably'], ['qwen2.5:3b', 'good reasoning']];
+  } else if (hw.gpu) {
+    chat = [['llama3.2:3b', 'small enough for your GPU'], ['llama3.2:1b', 'fastest']];
+  } else if (hw.ramGB >= 16) {
+    chat = [['llama3.2:3b', 'runs on CPU with your RAM'], ['qwen2.5:3b', 'good reasoning on CPU'], ['llama3.2:1b', 'fastest on CPU']];
+  } else {
+    chat = [['llama3.2:1b', 'lightest — best for CPU + limited RAM'], ['llama3.2:3b', 'try if 1b feels weak']];
+  }
+  return { chat: chat.map(([model, note]) => ({ model, note })), embed: 'nomic-embed-text' };
 }
 
 // Resolve the effective rerank decision from config + hardware.
@@ -329,12 +374,14 @@ app.post('/api/rag/upload', upload.single('file'), async (req, res) => {
     const withEmb = chunks.map((c, i) => ({ ...c, embedding: embeddings[i] }));
     store.savePdf(id, buf);
     store.saveChunks(id, withEmb);
+    const outline = await extractOutline(buf); // [] when the PDF has no bookmarks
     const book = {
       id,
       name: req.file.originalname,
       uploadedAt: new Date().toISOString(),
       chunkCount: chunks.length,
       pages: parsed.numpages,
+      outline,
     };
     store.addBook(book);
     res.json(book);
@@ -446,6 +493,113 @@ app.post('/api/rag/chat', async (req, res) => {
     } catch {
       if (!res.headersSent) res.status(500).json({ error: String(e.message || e) });
     }
+  }
+});
+
+// --- Study tools: summaries + quizzes over a chapter / page range ---------
+
+// Detected hardware + model suggestions, so the settings UI can point a
+// non-technical user at a model that will actually run well for them.
+app.get('/api/rag/hardware', async (req, res) => {
+  const hw = await detectHardware();
+  res.json({ ...hw, recommend: recommendModels(hw) });
+});
+
+// Group chunks into text blocks under maxChars, preserving reading order.
+function packChunks(chunks, maxChars) {
+  const groups = [];
+  let cur = '';
+  for (const c of chunks) {
+    if (cur && cur.length + c.text.length > maxChars) { groups.push(cur); cur = ''; }
+    cur += (cur ? '\n\n' : '') + c.text;
+  }
+  if (cur) groups.push(cur);
+  return groups;
+}
+
+// Summarize a range. Single block → one streamed pass. Many blocks → map-reduce:
+// summarize each block to bullets, then stream a final combined summary.
+async function mapReduceSummary(chunks, cfg, label, onProgress, onToken) {
+  const scope = label ? ` of "${label}"` : '';
+  const groups = packChunks(chunks, 6000);
+  if (groups.length <= 1) {
+    return chat([
+      { role: 'system', content: `You are a thoughtful reading companion. Write a clear, concise summary${scope} for a student — the key ideas in a few short paragraphs. Plain language, no preamble.` },
+      { role: 'user', content: groups[0] || '' },
+    ], cfg, onToken);
+  }
+  const partials = [];
+  for (let i = 0; i < groups.length; i++) {
+    onProgress?.(`reading part ${i + 1} of ${groups.length}…`);
+    // eslint-disable-next-line no-await-in-loop
+    const p = await chat([
+      { role: 'system', content: 'Summarize this part of a longer text into 3–5 tight bullet points capturing its key ideas. No preamble.' },
+      { role: 'user', content: groups[i] },
+    ], cfg);
+    partials.push(p);
+  }
+  onProgress?.('writing the summary…');
+  return chat([
+    { role: 'system', content: `You are a thoughtful reading companion. Using these notes${scope}, write a clear, concise summary for a student — the key ideas in a few short paragraphs. Plain language, no preamble, and don't mention "notes".` },
+    { role: 'user', content: partials.join('\n\n') },
+  ], cfg, onToken);
+}
+
+app.post('/api/rag/summarize', async (req, res) => {
+  try {
+    const { bookId, from = null, to = null, label = '' } = req.body || {};
+    if (!bookId) return res.status(400).json({ error: 'bookId required' });
+    const cfg = loadConfig();
+    const chunks = store.chunksInRange(bookId, from, to);
+    if (!chunks.length) return res.status(404).json({ error: 'no text found for that range' });
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.flushHeaders?.();
+    const send = (e, d) => res.write(`event: ${e}\ndata: ${JSON.stringify(d)}\n\n`);
+    try {
+      await mapReduceSummary(chunks, cfg, label, (s) => send('progress', { status: s }), (t) => send('token', { t }));
+      send('done', {});
+    } catch (e) {
+      send('error', { error: String(e.message || e) });
+    }
+    res.end();
+  } catch (e) {
+    if (!res.headersSent) res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+// Parse "Q: …\nA: …" pairs out of a model's reply, tolerantly.
+function parseQuiz(text) {
+  const items = [];
+  const re = /Q:\s*([\s\S]*?)\n\s*A:\s*([\s\S]*?)(?=\n\s*Q:|$)/g;
+  let m;
+  while ((m = re.exec(text || ''))) {
+    const q = m[1].trim();
+    const a = m[2].trim();
+    if (q && a) items.push({ q, a });
+  }
+  return items;
+}
+
+app.post('/api/rag/quiz', async (req, res) => {
+  try {
+    const { bookId, from = null, to = null, count = 5 } = req.body || {};
+    if (!bookId) return res.status(400).json({ error: 'bookId required' });
+    const cfg = loadConfig();
+    const chunks = store.chunksInRange(bookId, from, to);
+    if (!chunks.length) return res.status(404).json({ error: 'no text found for that range' });
+    const n = Math.max(1, Math.min(15, parseInt(count, 10) || 5));
+    const text = chunks.map((c) => c.text).join('\n\n').slice(0, 8000);
+    const out = await chat([
+      { role: 'system', content: `You are a study-guide author. From the text the user provides, write exactly ${n} exam-style questions that test real understanding, each with a short model answer grounded in the text. Format EACH item EXACTLY as two lines:\nQ: <question>\nA: <answer>\nNo numbering, no headers, nothing else.` },
+      { role: 'user', content: text },
+    ], cfg);
+    const questions = parseQuiz(out);
+    if (!questions.length) return res.status(502).json({ error: 'could not generate questions — try a different range or model' });
+    res.json({ questions });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
   }
 });
 

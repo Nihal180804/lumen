@@ -8,6 +8,27 @@ const RAG_BASE = (typeof window !== 'undefined' && window.bookshelf && window.bo
 // Matches the server sentinel for "search across every book".
 const ALL_BOOKS = '__all__';
 
+// A generated quiz: each question reveals its model answer on click.
+function QuizCard({ title, quiz, status, error }) {
+  return (
+    <div className="chat-msg bot chat-quiz">
+      <div className="chat-study-title">🎓 {title}</div>
+      {error ? (
+        <div className="chat-study-err">Couldn’t make a quiz: {error}</div>
+      ) : !quiz ? (
+        <div className="chat-study-status">{status || '…'}</div>
+      ) : (
+        quiz.map((it, i) => (
+          <details key={i} className="chat-quiz-item">
+            <summary><span className="chat-quiz-num">{i + 1}.</span> {it.q}</summary>
+            <div className="chat-quiz-a">{it.a}</div>
+          </details>
+        ))
+      )}
+    </div>
+  );
+}
+
 // Render an assistant answer, turning inline [n] markers into clickable jumps
 // to the cited passage. Numbers without a matching citation stay plain text.
 function AnswerText({ content, citations, onJump }) {
@@ -42,6 +63,12 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [studyOpen, setStudyOpen] = useState(false);
+  const [chapterIdx, setChapterIdx] = useState(0);
+  const [pageFrom, setPageFrom] = useState('');
+  const [pageTo, setPageTo] = useState('');
+  const [quizCount, setQuizCount] = useState(5);
+  const [studyBusy, setStudyBusy] = useState(false);
   const [modelInfo, setModelInfo] = useState({ models: [], active: '' });
   // Which edge the drawer lives on — the user can flip it left/right.
   const [side, setSide] = useLocalStorage('bookshelf.chat.side', 'right');
@@ -187,6 +214,90 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
     }
   };
 
+  // --- Study tools: summaries + quizzes over a chapter or page range ------
+  const book = books.find((b) => b.id === selectedBook);
+  const studyable = !!book && selectedBook !== ALL_BOOKS;
+  const outline = (book && book.outline) || [];
+  // When the PDF has bookmarks, offer chapters; otherwise fall back to page inputs.
+  const chapters = outline.length
+    ? [{ label: 'Whole book', from: null, to: null },
+       ...outline.map((o, i) => {
+         const next = outline.slice(i + 1).find((x) => x.page > o.page);
+         const to = next ? next.page - 1 : (book.pages || null);
+         return { label: `${'  '.repeat(o.level)}${o.title}`, from: o.page, to };
+       })]
+    : null;
+
+  const currentRange = () => {
+    if (chapters) {
+      const c = chapters[Math.min(chapterIdx, chapters.length - 1)] || chapters[0];
+      return { from: c.from, to: c.to, label: c.from != null ? c.label.trim() : '' };
+    }
+    const from = pageFrom ? parseInt(pageFrom, 10) : null;
+    const to = pageTo ? parseInt(pageTo, 10) : null;
+    const label = (from != null || to != null) ? `pages ${from || 1}–${to || (book && book.pages) || ''}` : '';
+    return { from, to, label };
+  };
+
+  const runSummary = async () => {
+    if (!studyable || studyBusy) return;
+    const { from, to, label } = currentRange();
+    setMessages((prev) => [...prev, { role: 'assistant', kind: 'summary', title: `Summary${label ? ` · ${label}` : ''}`, content: '' }]);
+    setStudyBusy(true);
+    const patchLast = (fn) => setMessages((prev) => { const c = [...prev]; c[c.length - 1] = fn(c[c.length - 1]); return c; });
+    try {
+      const r = await fetch(`${RAG_BASE}/api/rag/summarize`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook, from, to, label }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const events = buf.split('\n\n'); buf = events.pop();
+        for (const evt of events) {
+          const lines = evt.split('\n');
+          const ev = lines.find((l) => l.startsWith('event: '))?.slice(7);
+          const dl = lines.find((l) => l.startsWith('data: '))?.slice(6);
+          if (!dl) continue;
+          let j; try { j = JSON.parse(dl); } catch { continue; }
+          if (ev === 'progress') patchLast((m) => (m.content ? m : { ...m, status: j.status }));
+          else if (ev === 'token') patchLast((m) => ({ ...m, content: m.content + j.t, status: undefined }));
+          else if (ev === 'error') patchLast((m) => ({ ...m, content: `Error: ${j.error}`, status: undefined }));
+        }
+      }
+    } catch (e) {
+      patchLast((m) => ({ ...m, content: `Error: ${e.message}`, status: undefined }));
+    } finally {
+      setStudyBusy(false);
+    }
+  };
+
+  const runQuiz = async () => {
+    if (!studyable || studyBusy) return;
+    const { from, to, label } = currentRange();
+    setMessages((prev) => [...prev, { role: 'assistant', kind: 'quiz', title: `Quiz${label ? ` · ${label}` : ''}`, quiz: null, status: 'writing questions…' }]);
+    setStudyBusy(true);
+    const patchLast = (fn) => setMessages((prev) => { const c = [...prev]; c[c.length - 1] = fn(c[c.length - 1]); return c; });
+    try {
+      const r = await fetch(`${RAG_BASE}/api/rag/quiz`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook, from, to, count: quizCount }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'quiz failed');
+      patchLast((m) => ({ ...m, quiz: j.questions, status: undefined }));
+    } catch (e) {
+      patchLast((m) => ({ ...m, error: e.message, status: undefined }));
+    } finally {
+      setStudyBusy(false);
+    }
+  };
+
   const deleteBook = async () => {
     if (!selectedBook) return;
     if (!window.confirm('Delete this book from the index?')) return;
@@ -229,6 +340,7 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
         <div className="chat-title-row">
           <h3 className="panel-title">Chat ✦</h3>
           <div className="chat-actions">
+            <button className={`chat-icon${studyOpen ? ' is-active' : ''}`} title="Study tools — summaries & quizzes" onClick={() => setStudyOpen((v) => !v)} disabled={!studyable}>🎓</button>
             <button className="chat-icon" title="Delete this book" onClick={deleteBook} disabled={!selectedBook || selectedBook === ALL_BOOKS}>🗑</button>
             <button
               className="chat-icon"
@@ -256,6 +368,35 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
           </div>
         )}
 
+        {studyOpen && studyable && (
+          <div className="chat-study">
+            <div className="chat-study-row">
+              <span className="chat-study-label">Scope</span>
+              {chapters ? (
+                <select className="chat-study-scope" value={chapterIdx} onChange={(e) => setChapterIdx(Number(e.target.value))}>
+                  {chapters.map((c, i) => <option key={i} value={i}>{c.label}</option>)}
+                </select>
+              ) : (
+                <span className="chat-study-pages">
+                  pages
+                  <input className="chat-study-num" type="number" min="1" placeholder="1" value={pageFrom} onChange={(e) => setPageFrom(e.target.value)} />
+                  –
+                  <input className="chat-study-num" type="number" min="1" placeholder={book && book.pages ? String(book.pages) : ''} value={pageTo} onChange={(e) => setPageTo(e.target.value)} />
+                </span>
+              )}
+            </div>
+            <div className="chat-study-row">
+              <button className="chat-study-btn" onClick={runSummary} disabled={studyBusy}>📄 Summarize</button>
+              <button className="chat-study-btn" onClick={runQuiz} disabled={studyBusy}>🎓 Quiz</button>
+              <select className="chat-study-count" value={quizCount} onChange={(e) => setQuizCount(Number(e.target.value))} title="Number of questions">
+                {[3, 5, 8, 10].map((n) => <option key={n} value={n}>{n} Qs</option>)}
+              </select>
+              {studyBusy && <span className="chat-study-spin">working…</span>}
+            </div>
+            {!chapters && <div className="chat-study-hint">This PDF has no chapter bookmarks — pick a page range (leave blank for the whole book).</div>}
+          </div>
+        )}
+
         {uploading && (
           <div className="chat-status">
             Indexing PDF… this can take a while on the first upload with a local model.
@@ -279,15 +420,22 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
         )}
         {messages.map((m, i) => {
           const jump = (c) => onCite && onCite(c.bookId || selectedBook, c.snippet, c.page);
+          if (m.kind === 'quiz') {
+            return <QuizCard key={i} title={m.title} quiz={m.quiz} status={m.status} error={m.error} />;
+          }
+          const isLast = i === messages.length - 1;
           return (
           <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'bot'}`}>
-            {m.role === 'user'
-              ? <div>{m.content}</div>
-              : <AnswerText
-                  content={m.content || (busy && i === messages.length - 1 ? '…' : '')}
-                  citations={m.citations}
-                  onJump={jump}
-                />}
+            {m.title && <div className="chat-study-title">📄 {m.title}</div>}
+            {m.status && !m.content
+              ? <div className="chat-study-status">{m.status}</div>
+              : m.role === 'user'
+                ? <div>{m.content}</div>
+                : <AnswerText
+                    content={m.content || ((busy || studyBusy) && isLast ? '…' : '')}
+                    citations={m.citations}
+                    onJump={jump}
+                  />}
             {m.citations && m.citations.length > 0 && (
               <details className="chat-cite">
                 <summary>📖 sources · click to find in the page</summary>

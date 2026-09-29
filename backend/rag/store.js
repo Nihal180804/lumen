@@ -140,6 +140,17 @@ class Store {
     return this._rank(this.loadChunks(id), queryEmbedding, queryText, k);
   }
 
+  // Chunks whose source page falls in [from, to] (inclusive), in reading order.
+  // from/to null means open-ended. Used by summaries and study mode.
+  chunksInRange(id, from = null, to = null) {
+    return this.loadChunks(id)
+      .filter((c) => {
+        const p = c.page || 1;
+        return (from == null || p >= from) && (to == null || p <= to);
+      })
+      .sort((a, b) => a.idx - b.idx);
+  }
+
   // Search across the whole library at once. Every chunk from every book is
   // pooled so BM25 statistics and ranking are global; hits are tagged with the
   // book they came from.

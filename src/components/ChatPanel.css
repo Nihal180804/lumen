@@ -108,6 +108,54 @@
 }
 .chat-icon:hover:not(:disabled) { background: var(--butter); transform: translateY(-1px); }
 .chat-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+.chat-icon.is-active { background: var(--coral-soft); }
+
+/* ---- study tools (summaries + quizzes) ---- */
+.chat-study {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--paper-warm);
+  border: 1px dashed var(--coral-soft);
+  border-radius: var(--r-doodle-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-study-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chat-study-label { font-weight: 700; color: var(--ink-soft); font-size: 12px; }
+.chat-study-scope { flex: 1; min-width: 120px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--paper-shade); background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+.chat-study-pages { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-soft); font-size: 12px; }
+.chat-study-num { width: 52px; padding: 3px 5px; border-radius: 6px; border: 1px solid var(--paper-shade); background: var(--paper); color: var(--ink); }
+.chat-study-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--r-doodle-sm);
+  background: var(--coral-soft);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.chat-study-btn:hover:not(:disabled) { background: var(--coral); transform: translateY(-1px); }
+.chat-study-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.chat-study-count { padding: 4px 6px; border-radius: 6px; border: 1px solid var(--paper-shade); background: var(--paper); color: var(--ink); }
+.chat-study-spin { color: var(--ink-soft); font-style: italic; font-size: 12px; }
+.chat-study-hint { color: var(--ink-soft); font-size: 11px; opacity: 0.85; }
+.chat-study-title { font-weight: 800; color: var(--coral); margin-bottom: 4px; }
+.chat-study-status { color: var(--ink-soft); font-style: italic; }
+.chat-study-err { color: var(--coral); font-size: 12px; }
+
+.chat-quiz-item {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  background: var(--paper-warm);
+  border-left: 3px solid var(--coral-soft);
+  border-radius: 0 var(--r-doodle-sm) var(--r-doodle-sm) 0;
+}
+.chat-quiz-item summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.chat-quiz-num { color: var(--coral); font-weight: 800; margin-right: 4px; }
+.chat-quiz-a { margin-top: 6px; padding-left: 4px; color: var(--ink-soft); border-top: 1px dotted var(--paper-shade); padding-top: 6px; }
 .chat-icon.close:hover { transform: rotate(90deg); }
 
 .chat-book {
