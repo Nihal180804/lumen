@@ -34,7 +34,8 @@
     "dist": "npm run dist:full",
     "dist:full": "npm run build:full && electron-builder -c.artifactName=${productName}-${version}-full-${os}-${arch}.${ext}",
     "dist:lite": "npm run build:lite && electron-builder -c.artifactName=${productName}-${version}-lite-${os}-${arch}.${ext}",
-    "dist:all": "npm run dist:full && npm run dist:lite"
+    "dist:all": "npm run dist:full && npm run dist:lite",
+    "dist:core": "electron-builder --config electron-builder.core.json"
   },
   "build": {
     "extends": null,

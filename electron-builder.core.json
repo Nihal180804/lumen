@@ -1,0 +1,38 @@
+{
+  "appId": "com.lumen.core",
+  "productName": "Lumen Core",
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "extraMetadata": { "main": "electron/core-main.js" },
+  "directories": {
+    "output": "dist-electron",
+    "buildResources": "build-resources"
+  },
+  "files": [
+    "electron/**/*",
+    "!node_modules/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "backend",
+      "to": "backend",
+      "filter": ["**/*", "!rag-data/**", "!**/*.log"]
+    },
+    {
+      "from": "core",
+      "to": "core"
+    }
+  ],
+  "win": { "target": "nsis" },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "shortcutName": "Lumen Core",
+    "uninstallDisplayName": "Lumen Core"
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Utility",
+    "maintainer": "Nihal J",
+    "synopsis": "Headless performance-focused RAG console"
+  }
+}
