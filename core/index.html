@@ -9,10 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #f9f9f8; --panel: #ffffff; --panel-2: #f3f2f0;
-    --ink: #1c1e24; --ink-dim: #6b6f78; --ink-faint: #9a9ea6;
-    --line: #e6e4e0; --line-strong: #d8d5d0;
-    --accent: #c24a42; --accent-soft: #f4e5e3; --accent-ink: #9c3a33;
+    /* Odysseus "claude" theme — warm dark + terracotta */
+    --bg: #1f1e1b; --panel: #2b2926; --panel-2: #343029;
+    --ink: #f5f1e8; --ink-dim: #b4ac9c; --ink-faint: #7c7566;
+    --line: #38342d; --line-strong: #514b43;
+    --accent: #d97757; --accent-soft: rgba(217,119,87,0.15); --accent-ink: #e3936f;
     --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -27,8 +28,8 @@
   /* ---- sidebar ---- */
   aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
   .brand { padding: 18px 20px 14px; display: flex; align-items: baseline; gap: 9px; }
-  .brand b { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-  .brand span { font-size: 10.5px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; }
+  .brand b { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
+  .brand span { font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 1.5px; }
 
   .status { padding: 0 20px 14px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
@@ -68,7 +69,10 @@
   /* ---- main ---- */
   main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .transcript { flex: 1; overflow-y: auto; padding: 30px 36px; min-height: 0; }
-  .empty { color: var(--ink-faint); font-size: 12.5px; margin-top: 12vh; text-align: center; line-height: 2; }
+  .empty { margin-top: 15vh; text-align: center; }
+  .hero-brand { font-size: 30px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .hero-tag { color: var(--ink-dim); margin-top: 12px; font-size: 13px; }
+  .hero-sub { color: var(--ink-faint); margin-top: 20px; font-size: 11.5px; line-height: 1.9; }
 
   .turn { margin-bottom: 30px; max-width: 840px; }
   .q { font-weight: 600; color: var(--ink); margin-bottom: 12px; display: flex; gap: 9px; font-size: 14.5px; }
@@ -95,18 +99,25 @@
   .chunk .h { color: var(--ink-faint); margin-bottom: 3px; }
   .chunk .score { color: var(--accent); font-weight: 600; }
 
-  .composer { border-top: 1px solid var(--line); padding: 16px 24px; display: flex; gap: 10px; background: var(--panel); }
+  .composer { border-top: 1px solid var(--line); padding: 16px 24px 22px; background: var(--bg); }
+  .composer-card {
+    max-width: 860px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line-strong);
+    border-radius: 16px; padding: 12px 14px 10px; transition: border-color .15s;
+  }
+  .composer-card:focus-within { border-color: var(--accent); }
   .composer input {
-    flex: 1; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 999px; padding: 11px 17px;
-    color: var(--ink); font-family: var(--mono); font-size: 13.5px; outline: none;
+    width: 100%; background: transparent; border: none; outline: none; color: var(--ink);
+    font-family: var(--mono); font-size: 14px; padding: 4px 4px 9px;
   }
-  .composer input:focus { border-color: var(--accent); background: var(--panel); }
-  .composer button {
-    background: var(--ink); color: var(--bg); border: none; border-radius: 999px; padding: 0 22px;
-    font-weight: 600; cursor: pointer; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.5px;
+  .composer input::placeholder { color: var(--ink-faint); }
+  .composer-foot { display: flex; align-items: center; justify-content: space-between; }
+  .composer-hint { color: var(--ink-faint); font-size: 10.5px; letter-spacing: 0.3px; }
+  .send {
+    width: 31px; height: 31px; border-radius: 999px; background: var(--accent); color: #241109;
+    border: none; cursor: pointer; font-size: 16px; font-weight: 700; display: grid; place-items: center; line-height: 1;
   }
-  .composer button:hover:not(:disabled) { background: var(--accent); }
-  .composer button:disabled { opacity: .35; cursor: not-allowed; }
+  .send:hover:not(:disabled) { filter: brightness(1.08); }
+  .send:disabled { opacity: .35; cursor: not-allowed; }
   .err { color: var(--accent); font-size: 12px; }
 
   ::-webkit-scrollbar { width: 9px; height: 9px; }
@@ -127,14 +138,22 @@
 <main>
   <div class="transcript" id="transcript">
     <div class="empty" id="empty">
-      index a PDF, then query it.<br/>
-      answers are grounded in retrieved passages<br/>
-      with inline [n] citations and full latency telemetry.
+      <div class="hero-brand">⚓ Lumen Core</div>
+      <div class="hero-tag">grounded answers from your own PDFs.</div>
+      <div class="hero-sub">
+        index a PDF, then ask.<br/>
+        every answer shows its sources and its latency.
+      </div>
     </div>
   </div>
   <div class="composer">
-    <input id="input" placeholder="ask a question…" disabled autocomplete="off" />
-    <button id="send" disabled>SEND</button>
+    <div class="composer-card">
+      <input id="input" placeholder="Message Lumen Core…" disabled autocomplete="off" />
+      <div class="composer-foot">
+        <span class="composer-hint">grounded · cited · timed</span>
+        <button id="send" class="send" title="Send" disabled>↑</button>
+      </div>
+    </div>
   </div>
 </main>
 
