@@ -42,6 +42,20 @@
   .chip.on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
   .chip.off { color: var(--ink-faint); }
 
+  .setup {
+    margin: 14px 20px 4px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 10px;
+    background: var(--panel-2); font-size: 11.5px; color: var(--ink-dim); line-height: 1.6;
+  }
+  .setup b { color: var(--accent); display: block; margin-bottom: 3px; }
+  .setup code { color: var(--ink); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .setup button {
+    margin-top: 9px; width: 100%; background: var(--accent); color: #042420; border: none; border-radius: 8px;
+    padding: 8px; font-family: var(--mono); font-weight: 600; font-size: 12px; cursor: pointer;
+  }
+  .setup button:hover { filter: brightness(1.08); }
+  .setup .bar { height: 4px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-top: 9px; }
+  .setup .bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .3s; }
+
   .drop {
     margin: 16px 20px 12px; padding: 20px 14px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
     text-align: center; color: var(--ink-dim); cursor: pointer; transition: all .15s; font-size: 12px;
@@ -135,6 +149,7 @@
     <b>Lumen</b><span>core · rag</span>
   </div>
   <div class="status" id="status"><span class="chip">connecting…</span></div>
+  <div class="setup" id="setup" style="display:none"></div>
   <label class="drop" id="drop">
     <input type="file" id="file" accept="application/pdf" />
     drop a PDF or click to index
@@ -193,6 +208,51 @@ async function loadStatus() {
   } catch {
     $('status').innerHTML = '<span class="chip off">backend unreachable on :5001</span>';
   }
+}
+
+// Show a setup banner when local AI isn't ready: Ollama missing (point at the
+// setup script), or models not yet pulled (offer a one-click download).
+async function loadProvision() {
+  const el = $('setup');
+  try {
+    const s = await fetch(API + '/api/rag/provision/status').then((r) => r.json());
+    if (!s.ollamaInstalled) {
+      el.style.display = 'block';
+      el.innerHTML = '<b>Local AI not installed</b>Ollama isn’t installed. Run <code>npm run setup</code> in the project (or install from <a href="https://ollama.com/download" target="_blank">ollama.com</a>), then reload.';
+    } else if (s.missing && s.missing.length) {
+      el.style.display = 'block';
+      el.innerHTML = `<b>Set up local AI</b>Missing: ${s.missing.map(esc).join(', ')}<button id="provBtn">Download &amp; run (${s.missing.length})</button>`;
+      $('provBtn').onclick = runProvision;
+    } else {
+      el.style.display = 'none';
+    }
+  } catch { el.style.display = 'none'; }
+}
+
+async function runProvision() {
+  const el = $('setup');
+  el.innerHTML = '<b>Setting up local AI…</b><div id="provMsg">starting…</div><div class="bar"><i id="provBar"></i></div>';
+  try {
+    const r = await fetch(API + '/api/rag/provision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    const msg = (t) => { const m = $('provMsg'); if (m) m.textContent = t; };
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const evts = buf.split('\n\n'); buf = evts.pop();
+      for (const evt of evts) {
+        const ev = evt.split('\n').find((l) => l.startsWith('event: '))?.slice(7);
+        const dl = evt.split('\n').find((l) => l.startsWith('data: '))?.slice(6);
+        if (!dl) continue;
+        let j; try { j = JSON.parse(dl); } catch { continue; }
+        if (ev === 'status') msg(j.message || j.phase || '');
+        else if (ev === 'model') msg(`${j.model} ${j.state === 'done' ? 'ready' : 'downloading…'}`);
+        else if (ev === 'progress') { msg(`${j.model}: ${j.status}${j.percent != null ? ' ' + j.percent + '%' : ''}`); if (j.percent != null && $('provBar')) $('provBar').style.width = j.percent + '%'; }
+        else if (ev === 'done') { el.style.display = 'none'; loadStatus(); loadBooks(); }
+        else if (ev === 'error') { el.innerHTML = `<b>Setup failed</b>${esc(j.error)}` + (j.needsInstall ? '' : '<button id="provRetry">Retry</button>'); const rb = $('provRetry'); if (rb) rb.onclick = runProvision; }
+      }
+    }
+  } catch (e) { el.innerHTML = `<b>Setup failed</b>${esc(e.message)}`; }
 }
 
 async function loadBooks() {
@@ -351,7 +411,7 @@ drop.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f)
 $('send').onclick = () => ask($('input').value.trim());
 $('input').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask($('input').value.trim()); });
 
-loadStatus(); loadBooks();
+loadStatus(); loadBooks(); loadProvision();
 setInterval(loadStatus, 15000);
 </script>
 </body>

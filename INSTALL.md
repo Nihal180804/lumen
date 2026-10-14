@@ -42,8 +42,12 @@ Lumen uses a free tool called **Ollama** to run the AI on your machine.
 
 The AI needs two "models": one to *read* your PDF and one to *answer* you.
 
-Open **PowerShell** or **Command Prompt** (press the Windows key, type
-`powershell`, hit Enter) and paste these **one at a time**:
+**The easy way:** just open Lumen (Step 4). Once Ollama is installed, Lumen
+**downloads both models for you automatically** on first launch — you can skip
+the rest of this step. (Watch progress in Settings ⚙ if you like.)
+
+**Prefer to do it yourself?** Open **PowerShell** or **Command Prompt** (press
+the Windows key, type `powershell`, hit Enter) and paste these **one at a time**:
 
 ```
 ollama pull nomic-embed-text

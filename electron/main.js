@@ -102,6 +102,34 @@ function ensureOllama() {
     });
 }
 
+// Best-effort: once the RAG server is up, ask it to pull any missing local
+// models (nomic-embed-text + the default chat model). Streams progress to the
+// console; never blocks the UI. No-op in API mode or if Ollama isn't installed.
+function autoProvisionModels() {
+  try {
+    const u = new URL(ragBase + '/api/rag/provision');
+    const req = http.request(
+      { hostname: u.hostname, port: u.port, path: u.pathname, method: 'POST', headers: { 'Content-Type': 'application/json' } },
+      (res) => {
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const j = JSON.parse(line.slice(6));
+              if (j.model && j.status) process.stdout.write(`[provision] ${j.model}: ${j.status}${j.percent != null ? ` ${j.percent}%` : ''}\n`);
+              else if (j.pulled) console.log(`[provision] ready (pulled: ${j.pulled.join(', ') || 'none, all present'})`);
+              else if (j.error) console.log(`[provision] ${j.error}`);
+            } catch { /* ignore keep-alive lines */ }
+          }
+        });
+      },
+    );
+    req.on('error', () => {});
+    req.end('{}');
+  } catch { /* ignore */ }
+}
+
 function killChildren() {
   for (const p of [ragProc, ollamaProc]) {
     if (!p) continue;
@@ -165,6 +193,7 @@ app.whenReady().then(async () => {
 
   try {
     await waitForServer(ragBase);
+    autoProvisionModels(); // pull any missing local models in the background
   } catch (e) {
     dialog.showErrorBox('Lumen', `The reading assistant service failed to start.\n\n${e.message}`);
   }

@@ -30,9 +30,19 @@ cd backend && npm install && npm run rag
 
 Then open **http://localhost:5001/core**. Drop in a PDF, pick it, and query.
 
-Point it at a model the same way as the desktop app — local Ollama is the
-default (`ollama pull llama3.2 && ollama pull nomic-embed-text`), or set API
-mode in `backend/rag-data/config.json`. See [`../MODELS.md`](../MODELS.md).
+### Local models, zero terminal steps
+
+The server **auto-starts Ollama** if it's installed, and the console shows a
+**"Set up local AI"** banner that pulls any missing models (`nomic-embed-text`
+for embeddings, `llama3.2` for chat) with one click — `nomic-embed-text` runs
+the embeddings directly in Ollama, no LM Studio. If Ollama itself isn't
+installed, run `npm run setup` from the project root first (it installs Ollama
+and the models). Prefer an API provider instead? Set API mode in
+`backend/rag-data/config.json`. See [`../MODELS.md`](../MODELS.md).
+
+Endpoints behind the banner: `GET /api/rag/provision/status` (what's
+installed/missing) and `POST /api/rag/provision` (SSE — starts Ollama and pulls
+the required set, or an explicit `{"models":[...]}`).
 
 > The telemetry is server-measured (`process.hrtime`) and streamed over the
 > same SSE channel as the answer, so the numbers reflect the backend, not

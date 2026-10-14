@@ -75,13 +75,35 @@ control (set them before `ollama serve`):
 Lumen needs **two** models: one for **embeddings** (understanding the PDF) and one
 for **chat** (answering you).
 
-### 1. Install Ollama
+### Easiest: one command
+
+From the project folder:
+
+```bash
+npm run setup
+```
+
+This installs Ollama if it's missing, starts it, and pulls both models
+(`nomic-embed-text` + `llama3.2`). Add any extra model the same way:
+
+```bash
+npm run setup -- qwen2.5:7b
+```
+
+You can also do it by hand (below), and the app itself will offer to pull any
+missing models on first run — the desktop app does it automatically, and the
+[Core console](core/) shows a one-click **"Set up local AI"** button.
+
+> **No LM Studio needed.** `nomic-embed-text` runs the embeddings **directly in
+> Ollama** — Lumen's default is local Ollama for both embeddings and chat.
+
+### By hand — 1. Install Ollama
 
 Download it from **[ollama.com/download](https://ollama.com/download)** and install.
 On Windows/macOS it runs in the background automatically. (Lumen will also try to
 start it for you if it's installed but not running.)
 
-### 2. Pull the two models
+### By hand — 2. Pull the two models
 
 Open a terminal and run:
 

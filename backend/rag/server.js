@@ -11,6 +11,7 @@ const { chunk, chunkPages } = require('./chunker');
 const { Store } = require('./store');
 const { embed, chat } = require('./providers');
 const { extractOutline } = require('./outline');
+const ollamaRt = require('./ollama-runtime');
 
 // RAG_DATA_DIR is set by the Electron shell to the OS user-data dir so the
 // index is writable when the app is installed. Falls back to a local folder
@@ -40,6 +41,12 @@ const DEFAULT_CONFIG = {
   chunkSize: 800,
   chunkOverlap: 100,
   topK: 6,
+  // Models Ollama should have for local mode to work out of the box. nomic runs
+  // the embeddings natively (no LM Studio needed); llama3.2 is the default chat
+  // model. Add any other Ollama model here and it's provisioned the same way.
+  requiredModels: ['nomic-embed-text', 'llama3.2'],
+  // Try to launch `ollama serve` automatically if it's installed but not running.
+  autoStartOllama: true,
   // Retrieval quality knobs (see /api/rag/chat):
   // rerank: 'auto' | true | false. 'auto' turns reranking on when it's cheap —
   // always in API mode, and in local mode only when a GPU is detected (an extra
@@ -276,6 +283,92 @@ app.post('/api/rag/pull', async (req, res) => {
     res.end();
   } catch (e) {
     send('error', { error: 'Cannot reach Ollama. Is it installed and running?' });
+    res.end();
+  }
+});
+
+// Pull one Ollama model, reporting progress via onProgress({model,status,percent}).
+// Resolves when the model is present; rejects on error.
+async function pullModel(baseUrl, model, onProgress) {
+  const r = await fetch(`${baseUrl}/api/pull`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: model, stream: true }),
+  });
+  if (!r.ok) throw new Error(`Ollama responded ${r.status} pulling ${model}`);
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      let j; try { j = JSON.parse(line); } catch { continue; }
+      const percent = j.total && j.completed ? Math.round((j.completed / j.total) * 100) : null;
+      onProgress?.({ model, status: j.status || '', percent });
+      if (j.error) throw new Error(j.error);
+    }
+  }
+}
+
+// What's the local AI environment? So a UI can decide whether to offer setup.
+app.get('/api/rag/provision/status', async (req, res) => {
+  const cfg = loadConfig();
+  const base = cfg.local.baseUrl;
+  const running = await ollamaRt.isOllamaUp(base);
+  const want = [...new Set([
+    ...(cfg.requiredModels || []),
+    cfg.local.embedModel, cfg.local.chatModel,
+  ].filter(Boolean))];
+  const { present, missing } = running ? await ollamaRt.modelStatus(want, base) : { present: [], missing: want };
+  res.json({
+    ollamaInstalled: ollamaRt.isOllamaInstalled(),
+    ollamaRunning: running,
+    required: want, present, missing,
+  });
+});
+
+// Ensure Ollama is running, then pull any missing models (the required set, or
+// an explicit {models:[...]} — this is how "any other model" is added). Streams
+// per-model progress over SSE.
+app.post('/api/rag/provision', async (req, res) => {
+  const cfg = loadConfig();
+  const base = cfg.local.baseUrl;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders?.();
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  try {
+    send('status', { phase: 'starting', message: 'checking Ollama…' });
+    const up = await ollamaRt.ensureOllamaRunning(base);
+    if (!up) {
+      send('error', {
+        error: ollamaRt.isOllamaInstalled()
+          ? 'Ollama is installed but could not be started.'
+          : 'Ollama is not installed. Run the setup script (npm run setup) or install from https://ollama.com/download.',
+        needsInstall: !ollamaRt.isOllamaInstalled(),
+      });
+      return res.end();
+    }
+    const want = Array.isArray(req.body?.models) && req.body.models.length
+      ? req.body.models
+      : [...new Set([...(cfg.requiredModels || []), cfg.local.embedModel, cfg.local.chatModel].filter(Boolean))];
+    const { missing } = await ollamaRt.modelStatus(want, base);
+    if (!missing.length) { send('done', { pulled: [], alreadyPresent: want }); return res.end(); }
+    send('status', { phase: 'pulling', models: missing });
+    for (const model of missing) {
+      send('model', { model, state: 'start' });
+      // eslint-disable-next-line no-await-in-loop
+      await pullModel(base, model, (p) => send('progress', p));
+      send('model', { model, state: 'done' });
+    }
+    send('done', { pulled: missing });
+    res.end();
+  } catch (e) {
+    send('error', { error: String(e.message || e) });
     res.end();
   }
 });
@@ -656,4 +749,13 @@ app.listen(PORT, () => {
   Promise.all([hasGpu(), rerankEnabled(cfg)]).then(([gpu, rr]) => {
     console.log(`  gpu=${gpu ? 'yes' : 'no'}  rerank=${cfg.rerank}${cfg.rerank === 'auto' ? ` (→ ${rr ? 'on' : 'off'})` : ''}`);
   });
+  // Standalone / "core" runs: bring Ollama up if it's installed but idle, so
+  // local mode works without a separate terminal. The desktop app also starts
+  // it, but this call is idempotent (skips when it's already answering).
+  if (cfg.mode === 'local' && cfg.autoStartOllama !== false) {
+    ollamaRt.ensureOllamaRunning(cfg.local.baseUrl).then((up) => {
+      if (up) console.log('  ollama=running');
+      else console.log(`  ollama=${ollamaRt.isOllamaInstalled() ? 'installed, not started' : 'not installed (run: npm run setup)'}`);
+    });
+  }
 });
