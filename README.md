@@ -104,6 +104,14 @@ Lumen is a **React UI** wrapped in an **Electron shell** that supervises a small
 OpenAI-compatible API you point it at). Nothing here talks to Lumen's servers —
 there are none.
 
+> ### ⚙️ Want just the engine?
+> [**`core/`**](core/) is a headless, performance-focused RAG console — the same
+> retrieval pipeline with **no Electron and none of the cozy UI**, exposing full
+> telemetry per query: retrieval latency breakdown (rewrite → embed → hybrid
+> search → rerank), time-to-first-token, tok/s, and the retrieved passages with
+> their similarity scores. `cd backend && npm install && npm run rag`, then open
+> **http://localhost:5001/core**. See [core/README.md](core/README.md).
+
 ```mermaid
 flowchart TD
     subgraph Desktop["🖥️  Electron app (one window)"]

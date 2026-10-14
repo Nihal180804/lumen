@@ -167,6 +167,10 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
+// Barebones performance-focused RAG client (no Electron, no cozy UI).
+// Served at http://localhost:<PORT>/core — see core/README.md.
+app.use('/core', express.static(path.join(__dirname, '..', '..', 'core')));
+
 const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.get('/api/rag/config', async (req, res) => {
@@ -438,24 +442,30 @@ app.post('/api/rag/chat', async (req, res) => {
     const { bookId, question, history = [] } = req.body || {};
     if (!bookId || !question) return res.status(400).json({ error: 'bookId and question required' });
     const cfg = loadConfig();
+    const now = () => Number(process.hrtime.bigint() / 1000n) / 1000; // ms, sub-ms precision
+    const t0 = now();
 
     const searchQuery = cfg.rewriteFollowups
       ? await rewriteFollowup(question, history, cfg)
       : question;
+    const tRewrite = now();
 
     const doRerank = await rerankEnabled(cfg);
     const [qVec] = await embed([searchQuery], cfg, 'query');
+    const tEmbed = now();
     const poolSize = doRerank ? Math.max(cfg.rerankPool, cfg.topK) : cfg.topK;
     const allBooks = bookId === ALL_BOOKS;
     let hits = allBooks
       ? store.searchAll(qVec, searchQuery, poolSize)
       : store.search(bookId, qVec, searchQuery, poolSize);
+    const tSearch = now();
     if (!hits.length) {
       return res.status(404).json({ error: allBooks
         ? 'no books have finished indexing yet'
         : 'this book has not finished indexing yet' });
     }
     if (doRerank) hits = await rerankHits(searchQuery, hits, cfg, cfg.topK);
+    const tRerank = now();
 
     // Number the passages so the model can cite them inline as [1], [2], …
     // and the UI can turn those markers into clickable jumps to the source.
@@ -475,15 +485,45 @@ app.post('/api/rag/chat', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
 
+    // Retrieval telemetry up front, so a perf UI can render it before the
+    // first token even arrives. The cozy app ignores unknown SSE events.
+    const gpu = await hasGpu();
+    res.write(`event: meta\ndata: ${JSON.stringify({
+      mode: cfg.mode,
+      model: cfg.mode === 'local' ? cfg.local.chatModel : cfg.api.chatModel,
+      gpu,
+      rewritten: cfg.rewriteFollowups && searchQuery !== question ? searchQuery : null,
+      reranked: doRerank,
+      timings: {
+        rewriteMs: +(tRewrite - t0).toFixed(1),
+        embedMs: +(tEmbed - tRewrite).toFixed(1),
+        searchMs: +(tSearch - tEmbed).toFixed(1),
+        rerankMs: +(tRerank - tSearch).toFixed(1),
+        retrievalMs: +(tRerank - t0).toFixed(1),
+      },
+    })}\n\n`);
+
     res.write(`event: citations\ndata: ${JSON.stringify(hits.map((h, i) => ({
       label: i + 1, idx: h.idx, snippet: h.text.slice(0, 240), page: h.page,
-      bookId: h.bookId, bookName: h.bookName,
+      bookId: h.bookId, bookName: h.bookName, score: +(h.score || 0).toFixed(4),
     })))}\n\n`);
 
+    let firstTokenAt = null;
+    let tokenCount = 0;
     await chat(messages, cfg, (tok) => {
+      if (firstTokenAt === null) firstTokenAt = now();
+      tokenCount += 1;
       res.write(`event: token\ndata: ${JSON.stringify({ t: tok })}\n\n`);
     });
-    res.write(`event: done\ndata: {}\n\n`);
+    const tEnd = now();
+    const genMs = firstTokenAt !== null ? tEnd - firstTokenAt : 0;
+    res.write(`event: done\ndata: ${JSON.stringify({
+      ttftMs: firstTokenAt !== null ? +(firstTokenAt - tRerank).toFixed(1) : null, // time to first token after retrieval
+      genMs: +genMs.toFixed(1),
+      totalMs: +(tEnd - t0).toFixed(1),
+      tokens: tokenCount,
+      tokensPerSec: genMs > 0 ? +((tokenCount / genMs) * 1000).toFixed(1) : null,
+    })}\n\n`);
     res.end();
   } catch (e) {
     console.error('chat error:', e);
