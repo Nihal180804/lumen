@@ -4,6 +4,8 @@ A barebones, performance-focused front end for the same local RAG engine that
 powers Lumen — **no Electron, no music, themes, notes, planner, or timer**. Just
 the retrieval pipeline, exposed with full telemetry.
 
+<img src="docs/hero.jpg" width="820" alt="Lumen Core — Aurora console, idle state" />
+
 It's one static `index.html` (no build step) that talks to the Node/Express RAG
 server in [`../backend/rag`](../backend/rag). The engine is identical to the
 desktop app's: page-aware chunking, hybrid dense + BM25 retrieval fused with
@@ -21,6 +23,12 @@ machine work**. Every answer shows:
   count, end-to-end total.
 - **Retrieved passages** with their fused similarity scores and source pages.
 - **Hardware & config**: mode, model, GPU/VRAM (or CPU/RAM), rerank state.
+
+<img src="docs/console.jpg" width="820" alt="Lumen Core — a grounded answer with inline citation, full latency telemetry, and retrieved passages with similarity scores" />
+
+> Real run above: `llama3.2:3b` + `nomic-embed-text` on a CPU-only laptop —
+> retrieval in ~140 ms, answer grounded with a `[3]` citation, and every
+> passage shown with its fused similarity score and source page.
 
 ## Run
 

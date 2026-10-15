@@ -19,8 +19,7 @@ questions about the book you're reading**. Everything runs on your machine.
 
 ### [⬇️ Download the latest release](../../releases/latest) · [🛠 Install guide](INSTALL.md) · [🤖 Model setup](MODELS.md)
 
-<!-- Add docs/screenshots/hero.png (the main desk view) and it renders here: -->
-<img src="docs/screenshots/hero.png" width="880" alt="Lumen desk view" />
+<img src="docs/screenshots/hero.jpg" width="880" alt="Lumen desk view — lofi reading room with music player" />
 
 </div>
 
@@ -34,15 +33,17 @@ conversations never leave your computer.
 
 | | Feature | |
 |---|---|---|
-| 📖 | **Read any PDF** — smooth vertical scrolling, resizable, zoom, page memory | <img src="docs/screenshots/reader.png" width="240" alt="Reader"/> |
-| 💬 | **Chat with your book** — grounded answers with **clickable citations that jump to the source page**, fully local | <img src="docs/screenshots/chat.png" width="240" alt="Chat"/> |
-| 🎨 | **5 themes × light/dark** — Paper, Glassmorphism, Midnight, Sakura, Forest | <img src="docs/screenshots/themes.png" width="240" alt="Themes"/> |
+| 📖 | **Read any PDF** — smooth vertical scrolling, resizable, zoom, page memory | <img src="docs/screenshots/reader.jpg" width="240" alt="Reader"/> |
+| 💬 | **Chat with your book** — grounded answers with **clickable citations that jump to the source page**, fully local | <img src="docs/screenshots/chat.jpg" width="240" alt="Chat with citations"/> |
+| 🎨 | **5 themes × light/dark** — Paper, Glassmorphism, Midnight, Sakura, Forest | |
 | 🖼️ | **Ambient wallpapers** you can switch between (or add your own) | |
 | 🎵 | **Lofi player** + generated **rain / wind / waves** ambience | |
-| 📝 | **Notes** (handwritten fonts, export to PDF) · ✅ **Planner** · ⏳ **Focus timer** | <img src="docs/screenshots/settings.png" width="240" alt="Settings"/> |
+| 📝 | **Notes** (handwritten fonts, export to PDF) · ✅ **Planner** · ⏳ **Focus timer** | |
 | 🔒 | **Private by default** — offline, no accounts, nothing phones home | |
 
-> _Screenshots live in [`docs/screenshots/`](docs/screenshots) — drop yours in and they appear above._
+**Reader + chat side by side** — ask about the open book, get a grounded answer with a citation that jumps to the source page:
+
+<img src="docs/screenshots/chat.jpg" width="880" alt="Lumen reader with the chat panel open, showing a grounded answer and a page citation" />
 
 ---
 
