@@ -19,7 +19,9 @@ questions about the book you're reading**. Everything runs on your machine.
 
 ### [⬇️ Download the latest release](../../releases/latest) · [🛠 Install guide](INSTALL.md) · [🤖 Model setup](MODELS.md)
 
-<img src="docs/screenshots/hero.jpg" width="880" alt="Lumen desk view — lofi reading room with music player" />
+<img src="docs/screenshots/demo.gif" width="880" alt="Lumen — open a PDF in the cozy reader, ask the chat a question, and click the citation to jump to the source page" />
+
+<sub><i>Open a book, ask about it, and click the citation — the reader jumps to the exact source page. All local.</i></sub>
 
 </div>
 
