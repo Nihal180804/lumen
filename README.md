@@ -47,6 +47,12 @@ conversations never leave your computer.
 
 <img src="docs/screenshots/chat.jpg" width="880" alt="Lumen reader with the chat panel open, showing a grounded answer and a page citation" />
 
+### ✨ A tour of the desk
+
+Notes, planner, focus timer, ambient sounds, and **5 themes × swappable wallpapers** — the whole space is yours to arrange:
+
+<img src="docs/screenshots/features.gif" width="880" alt="Feature tour — notes, planner, focus timer, ambient rain/wind/waves, switching to the Sakura theme and the Elf Kingdom wallpaper" />
+
 ---
 
 ## ⬇️ Get Lumen
