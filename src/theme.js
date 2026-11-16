@@ -10,13 +10,14 @@ const COZY_THEMES = [
 ];
 
 // Focus edition: clean dual-tone themes — a neutral base + one confident accent,
-// nothing decorative. Colors live in tokens.css under :root[data-theme="…"].
+// nothing decorative. Colors live in focus.css under :root[data-theme="…"].
 const FOCUS_THEMES = [
+  { key: 'voyage',   label: 'Voyage',   preview: { bg: '#1f1e1b', accent: '#d97757', ink: '#f5f1e8' } },
   { key: 'graphite', label: 'Graphite', preview: { bg: '#16181d', accent: '#7c8cff', ink: '#e8ecf3' } },
-  { key: 'cream',    label: 'Cream',    preview: { bg: '#f6f4ef', accent: '#1c1e24', ink: '#1c1e24' } },
   { key: 'slate',    label: 'Slate',    preview: { bg: '#0f1417', accent: '#35e0d0', ink: '#e6eef0' } },
   { key: 'black',    label: 'Black',    preview: { bg: '#0a0a0a', accent: '#c6f24e', ink: '#ededed' } },
+  { key: 'cream',    label: 'Cream',    preview: { bg: '#f6f4ef', accent: '#1c1e24', ink: '#1c1e24' } },
 ];
 
 export const THEMES = IS_FOCUS ? FOCUS_THEMES : COZY_THEMES;
-export const DEFAULT_THEME = IS_FOCUS ? 'graphite' : 'paper';
+export const DEFAULT_THEME = IS_FOCUS ? 'voyage' : 'paper';

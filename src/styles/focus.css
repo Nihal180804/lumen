@@ -4,7 +4,19 @@
    decoration-free surface. Only active when data-edition="focus".
    ============================================================ */
 
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
+
 /* ---- Focus theme palettes (map onto the shared token contract) ---- */
+
+/* Voyage — warm dark + terracotta (the default; Odysseus-inspired) */
+:root[data-theme="voyage"] {
+  --app-bg: #1f1e1b;
+  --paper: #26241f; --paper-warm: #2b2926; --paper-tint: rgba(38,36,31,0.97); --paper-shade: #413b33;
+  --ink: #f5f1e8; --ink-soft: #b4ac9c; --ink-faint: #7c7566;
+  --coral: #d97757; --coral-soft: rgba(217,119,87,0.16); --coral-dark: #e3936f;
+  --sage: #9a9183; --sage-soft: rgba(154,145,131,0.16); --butter: #d97757;
+  --on-accent: #241109;
+}
 
 :root[data-theme="graphite"] {
   --app-bg: #16181d;
@@ -55,8 +67,9 @@
   /* flat, quiet shadows */
   --shadow-pencil:    0 1px 2px rgba(0,0,0,0.18), 0 10px 30px rgba(0,0,0,0.22);
   --shadow-pencil-sm: 0 1px 2px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.18);
-  /* one clean sans everywhere — no handwriting fonts */
-  --font-hand: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Fira Code mono everywhere — the terminal/editorial Odysseus feel */
+  --font-body: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-hand: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Solid themed background (no wallpaper image in this edition) */

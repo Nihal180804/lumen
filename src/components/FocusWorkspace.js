@@ -88,14 +88,18 @@ function RagColumn({ bookId, notes }) {
           </div>
         ))}
       </div>
-      <div className="fw-rag-input">
+      <div className="fw-composer">
         <input
+          className="fw-composer-input"
           value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
-          placeholder={bookId ? 'Ask a question…' : 'Open a PDF first'}
+          placeholder={bookId ? 'Message the assistant…' : 'Open a PDF first'}
           disabled={!bookId || busy}
         />
-        <button onClick={send} disabled={!bookId || busy || !input.trim()}>{busy ? '…' : 'Send'}</button>
+        <div className="fw-composer-foot">
+          <span className="fw-composer-hint">grounded · pdf + notes</span>
+          <button className="fw-send" onClick={send} disabled={!bookId || busy || !input.trim()} title="Send">↑</button>
+        </div>
       </div>
     </div>
   );
@@ -177,15 +181,19 @@ export default function FocusWorkspace({ theme, setTheme, mode, setMode, onOpenS
     <div className="fw-root">
       {/* Sessions rail */}
       <aside className={`fw-rail${railOpen ? '' : ' collapsed'}`}>
-        <div className="fw-rail-top">
-          <button className="fw-rail-toggle" title={railOpen ? 'Collapse' : 'Sessions'} onClick={() => setRailOpen((v) => !v)}>☰</button>
-          {railOpen && <span className="fw-rail-title">Sessions</span>}
-          {railOpen && <button className="fw-rail-add" title="New session" onClick={addSession}>＋</button>}
+        <div className="fw-rail-brand">
+          <button className="fw-rail-toggle" title={railOpen ? 'Collapse' : 'Expand'} onClick={() => setRailOpen((v) => !v)}>☰</button>
+          {railOpen && <span className="fw-brand">⚓ Lumen</span>}
         </div>
+        {railOpen && (
+          <button className="fw-nav fw-newsess" onClick={addSession}><span className="fw-nav-ico">＋</span> New session</button>
+        )}
+        {railOpen && <div className="fw-rail-label">Sessions</div>}
         {railOpen && (
           <div className="fw-rail-list">
             {sessions.map((s) => (
               <div key={s.id} className={`fw-sess${s.id === activeId ? ' active' : ''}`} onClick={() => setActiveId(s.id)}>
+                <span className="fw-sess-ico">▸</span>
                 <input
                   className="fw-sess-name" value={s.name}
                   onChange={(e) => renameSession(s.id, e.target.value)}
@@ -198,7 +206,7 @@ export default function FocusWorkspace({ theme, setTheme, mode, setMode, onOpenS
         )}
         {railOpen && (
           <div className="fw-rail-foot">
-            <button onClick={() => onOpenSettings && onOpenSettings()} title="Settings">⚙ Settings</button>
+            <button className="fw-nav" onClick={() => onOpenSettings && onOpenSettings()}><span className="fw-nav-ico">◑</span> Theme</button>
           </div>
         )}
       </aside>
