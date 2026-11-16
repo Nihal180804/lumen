@@ -8,7 +8,7 @@ const os = require('os');
 const { execFile } = require('child_process');
 const pdfParse = require('pdf-parse');
 const { chunk, chunkPages } = require('./chunker');
-const { Store } = require('./store');
+const { Store, cosine } = require('./store');
 const { embed, chat } = require('./providers');
 const { extractOutline } = require('./outline');
 const ollamaRt = require('./ollama-runtime');
@@ -532,7 +532,7 @@ async function rerankHits(question, hits, cfg, k) {
 
 app.post('/api/rag/chat', async (req, res) => {
   try {
-    const { bookId, question, history = [] } = req.body || {};
+    const { bookId, question, history = [], notes = '' } = req.body || {};
     if (!bookId || !question) return res.status(400).json({ error: 'bookId and question required' });
     const cfg = loadConfig();
     const now = () => Number(process.hrtime.bigint() / 1000n) / 1000; // ms, sub-ms precision
@@ -560,12 +560,40 @@ app.post('/api/rag/chat', async (req, res) => {
     if (doRerank) hits = await rerankHits(searchQuery, hits, cfg, cfg.topK);
     const tRerank = now();
 
-    // Number the passages so the model can cite them inline as [1], [2], …
-    // and the UI can turn those markers into clickable jumps to the source.
-    const context = hits
-      .map((h, i) => `[${i + 1}]${allBooks && h.bookName ? ` (from "${h.bookName.replace(/\.pdf$/i, '')}")` : ''}\n${h.text}`)
+    // Retrieve from the reader's own notes too, when provided. Notes change
+    // often, so we embed them fresh per query (cheap — they're short) rather
+    // than pre-indexing. The best-matching note snippets join the book
+    // passages as extra sources, tagged so the UI can label them.
+    let noteHits = [];
+    if (typeof notes === 'string' && notes.trim().length > 40) {
+      const noteChunks = chunk(notes, 600, 80);
+      if (noteChunks.length) {
+        const noteVecs = await embed(noteChunks.map((c) => c.text), cfg, 'document');
+        noteHits = noteChunks
+          .map((c, i) => ({ text: c.text, score: cosine(noteVecs[i], qVec), source: 'notes' }))
+          .filter((h) => h.score > 0.35)   // only genuinely relevant notes
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2);
+      }
+    }
+    const tNotes = now();
+
+    // Unified, numbered source list: book passages first, then any note hits.
+    const sources = [
+      ...hits.map((h) => ({ ...h, source: 'book' })),
+      ...noteHits,
+    ];
+
+    const context = sources
+      .map((h, i) => {
+        const tag = h.source === 'notes'
+          ? ' (from your own notes)'
+          : (allBooks && h.bookName ? ` (from "${h.bookName.replace(/\.pdf$/i, '')}")` : '');
+        return `[${i + 1}]${tag}\n${h.text}`;
+      })
       .join('\n\n---\n\n');
-    const system = `You are a warm, concise reading companion who has read the user's book${allBooks ? 's' : ''}. Answer using ONLY the numbered passages below. Write naturally, as if you simply know the material — don't talk about "passages" or "excerpts". After each sentence or claim, add the bracketed number(s) of the passage it came from, like [1] or [2][3]. Only cite numbers that appear below. If the answer isn't in what you were given, say so plainly and kindly.`;
+    const noteLine = noteHits.length ? ' Some passages are the reader\'s own notes — treat them as their thinking, and weave them in naturally.' : '';
+    const system = `You are a warm, concise reading companion who has read the user's book${allBooks ? 's' : ''}. Answer using ONLY the numbered passages below. Write naturally, as if you simply know the material — don't talk about "passages" or "excerpts".${noteLine} After each sentence or claim, add the bracketed number(s) of the passage it came from, like [1] or [2][3]. Only cite numbers that appear below. If the answer isn't in what you were given, say so plainly and kindly.`;
     const user = `Passages:\n\n${context}\n\n---\n\nQuestion: ${question}`;
     const messages = [
       { role: 'system', content: system },
@@ -587,18 +615,21 @@ app.post('/api/rag/chat', async (req, res) => {
       gpu,
       rewritten: cfg.rewriteFollowups && searchQuery !== question ? searchQuery : null,
       reranked: doRerank,
+      notesUsed: noteHits.length,
       timings: {
         rewriteMs: +(tRewrite - t0).toFixed(1),
         embedMs: +(tEmbed - tRewrite).toFixed(1),
         searchMs: +(tSearch - tEmbed).toFixed(1),
         rerankMs: +(tRerank - tSearch).toFixed(1),
-        retrievalMs: +(tRerank - t0).toFixed(1),
+        notesMs: +(tNotes - tRerank).toFixed(1),
+        retrievalMs: +(tNotes - t0).toFixed(1),
       },
     })}\n\n`);
 
-    res.write(`event: citations\ndata: ${JSON.stringify(hits.map((h, i) => ({
+    res.write(`event: citations\ndata: ${JSON.stringify(sources.map((h, i) => ({
       label: i + 1, idx: h.idx, snippet: h.text.slice(0, 240), page: h.page,
-      bookId: h.bookId, bookName: h.bookName, score: +(h.score || 0).toFixed(4),
+      bookId: h.bookId, bookName: h.bookName, source: h.source,
+      score: +(h.score || 0).toFixed(4),
     })))}\n\n`);
 
     let firstTokenAt = null;
