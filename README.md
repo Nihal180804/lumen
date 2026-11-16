@@ -60,15 +60,21 @@ Notes, planner, focus timer, ambient sounds, and **5 themes × swappable wallpap
 ### Download (easiest)
 
 Grab an installer from the [**Releases**](../../releases/latest) page. There are
-**two editions** — pick one:
+**three editions** — pick one:
 
 | Edition | Includes | Best for |
 |---|---|---|
 | **Full** — `Lumen-x.y.z-full-win-x64.exe` | All 8 lofi tracks + all 7 wallpapers | Just want everything |
 | **Lite** — `Lumen-x.y.z-lite-win-x64.exe` | 2 tracks + 3 wallpapers (smaller download) | Smaller / slower connections |
+| **Focus** — `Lumen-Focus-x.y.z-win-x64.exe` | No music or wallpapers — clean dual-tone themes, the lightest build | Distraction-free, use-focused reading |
 
-Both are the **same app** with identical features — only the bundled music &
-wallpapers differ. Lite users can add the rest anytime via the downloadable packs
+Full and Lite are the **same cozy app** — only the bundled media differs.
+**Focus** is a separate, minimal edition: no music, no wallpapers, four clean
+two-tone themes (Graphite / Cream / Slate / Black), a pared-down posh settings
+panel, and a smaller install. It also lets the AI draw on **your own notes**,
+not just the PDF. It installs alongside the others, so you can keep both.
+
+Full/Lite users can add the rest of the media anytime via the downloadable packs
 on the same release:
 
 - **`Lumen-music-pack.zip`** → the other 6 tracks
@@ -81,8 +87,8 @@ Install, launch, done. To chat with your books you'll also want a local model �
 the **[install guide](INSTALL.md)** walks a non-technical friend through the
 whole thing in ~5 minutes.
 
-> Building from source? `npm run dist:full`, `npm run dist:lite`, or
-> `npm run dist:all` (see [package.json](package.json)).
+> Building from source? `npm run dist:full`, `npm run dist:lite`,
+> `npm run dist:focus`, or `npm run dist:all` (see [package.json](package.json)).
 
 > ℹ️ The installer isn't code-signed, so Windows SmartScreen shows a
 > "More info → Run anyway" prompt on first launch. That's expected for an
