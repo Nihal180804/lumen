@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
-import { TRACKS, BACKGROUNDS, DEFAULT_BACKGROUND } from './constants';
+import { TRACKS, BACKGROUNDS, DEFAULT_BACKGROUND, IS_FOCUS } from './constants';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { MusicPlayer } from './components/MusicPlayer';
@@ -344,7 +344,7 @@ function App() {
   };
 
   return (
-    <div style={{ backgroundImage: `url(${background})` }} className="App">
+    <div style={IS_FOCUS ? undefined : { backgroundImage: `url(${background})` }} className="App">
       <div className="app-scrim" aria-hidden="true" />
 
       <MusicPlayer
@@ -363,6 +363,7 @@ function App() {
         ambientMix={ambientMix}
         onToggleAmbient={toggleAmbient}
         onAmbientVol={setAmbientVol}
+        isFocus={IS_FOCUS}
       />
 
       {/* User ambient loops (built-in ones are Web-Audio, no element needed) */}
@@ -458,6 +459,7 @@ function App() {
         onToggle={() => togglePanel('chat')}
         onOpenSettings={() => openSettings('ai')}
         onCite={handleCite}
+        notes={IS_FOCUS ? notes : undefined}
       />
     </div>
   );

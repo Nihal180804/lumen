@@ -2,16 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { THEMES } from '../theme';
 import { AMBIENT_SOUNDS } from '../audio/ambient';
 import { useFilmstripNav } from '../hooks/useFilmstripNav';
+import { IS_FOCUS } from '../constants';
 import './SettingsPanel.css';
 
 const RAG_BASE = (typeof window !== 'undefined' && window.bookshelf && window.bookshelf.ragBase)
   || process.env.REACT_APP_RAG_BASE || 'http://localhost:5001';
 
+// Focus edition ships no music or wallpapers, so it hides the Sounds tab.
 const TABS = [
   { key: 'appearance', label: 'Appearance', icon: '🎨' },
   { key: 'sounds',     label: 'Sounds',     icon: '🎵' },
   { key: 'ai',         label: 'AI',         icon: '💬' },
-];
+].filter((t) => !(IS_FOCUS && t.key === 'sounds'));
 
 export default function SettingsPanel({
   initialTab = 'appearance', onClose,
@@ -106,6 +108,7 @@ function AppearanceTab({ theme, setTheme, mode, setMode, wallpapers, currentWall
         ))}
       </div>
 
+      {!IS_FOCUS && (<>
       <h2 className="settings-h2">Wallpaper</h2>
       <p className="settings-hint">← → to browse, Enter to apply</p>
       <div className="settings-strip" ref={wpRef} tabIndex={0} onKeyDown={wpNav.onKeyDown} role="radiogroup" aria-label="Wallpapers">
@@ -146,6 +149,7 @@ function AppearanceTab({ theme, setTheme, mode, setMode, wallpapers, currentWall
           <button className="settings-btn" onClick={() => setPending(null)}>Cancel</button>
         </div>
       )}
+      </>)}
 
       <h2 className="settings-h2" style={{ marginTop: 24 }}>Help</h2>
       <button className="settings-btn" style={{ marginTop: 12 }} onClick={() => onReplayTutorial && onReplayTutorial()}>🎓 Take the tour again</button>

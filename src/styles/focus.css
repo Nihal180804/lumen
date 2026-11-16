@@ -1,0 +1,112 @@
+/* ============================================================
+   LUMEN FOCUS — the minimal, use-focused edition.
+   Clean dual-tone themes (neutral base + one accent) and a flat,
+   decoration-free surface. Only active when data-edition="focus".
+   ============================================================ */
+
+/* ---- Focus theme palettes (map onto the shared token contract) ---- */
+
+:root[data-theme="graphite"] {
+  --app-bg: #16181d;
+  --paper: #1d2027; --paper-warm: #22262e; --paper-tint: rgba(29,32,39,0.97); --paper-shade: #2b313b;
+  --ink: #e8ecf3; --ink-soft: #aab3c0; --ink-faint: #6b7483;
+  --coral: #7c8cff; --coral-soft: rgba(124,140,255,0.18); --coral-dark: #9aa6ff;
+  --sage: #8a93a3; --sage-soft: rgba(138,147,163,0.18); --butter: #7c8cff;
+  --on-accent: #0f1016;
+}
+:root[data-theme="cream"] {
+  --app-bg: #f6f4ef;
+  --paper: #ffffff; --paper-warm: #f1efe9; --paper-tint: rgba(255,255,255,0.97); --paper-shade: #e4e1d8;
+  --ink: #1c1e24; --ink-soft: #595c66; --ink-faint: #9a9ca4;
+  --coral: #1c1e24; --coral-soft: rgba(28,30,36,0.10); --coral-dark: #000000;
+  --sage: #6b6f78; --sage-soft: rgba(107,111,120,0.14); --butter: #1c1e24;
+  --on-accent: #f6f4ef;
+}
+:root[data-theme="slate"] {
+  --app-bg: #0f1417;
+  --paper: #151c20; --paper-warm: #1a2227; --paper-tint: rgba(21,28,32,0.97); --paper-shade: #243137;
+  --ink: #e6eef0; --ink-soft: #9fb0b4; --ink-faint: #5f7075;
+  --coral: #35e0d0; --coral-soft: rgba(53,224,208,0.15); --coral-dark: #5fe8da;
+  --sage: #7d9196; --sage-soft: rgba(125,145,150,0.16); --butter: #35e0d0;
+  --on-accent: #042420;
+}
+:root[data-theme="black"] {
+  --app-bg: #0a0a0a;
+  --paper: #141414; --paper-warm: #1a1a1a; --paper-tint: rgba(20,20,20,0.97); --paper-shade: #272727;
+  --ink: #ededed; --ink-soft: #a0a0a0; --ink-faint: #666666;
+  --coral: #c6f24e; --coral-soft: rgba(198,242,78,0.15); --coral-dark: #d4f56e;
+  --sage: #8a8a8a; --sage-soft: rgba(138,138,138,0.16); --butter: #c6f24e;
+  --on-accent: #0a0a0a;
+}
+
+/* ---- Edition-wide: strip the cozy decoration, flatten the surface ---- */
+
+:root[data-edition="focus"] {
+  --tape: transparent;
+  --tape-mint: transparent;
+  --tape-display: none;            /* no washi-tape strips */
+  --title-underline: none;         /* no wavy hand underline */
+  --app-scrim: transparent;        /* no wallpaper to dim */
+  --surface-blur: none;
+  --logo-filter: none;
+  /* clean geometry instead of hand-drawn wobble */
+  --r-doodle: 14px;
+  --r-doodle-sm: 9px;
+  /* flat, quiet shadows */
+  --shadow-pencil:    0 1px 2px rgba(0,0,0,0.18), 0 10px 30px rgba(0,0,0,0.22);
+  --shadow-pencil-sm: 0 1px 2px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.18);
+  /* one clean sans everywhere — no handwriting fonts */
+  --font-hand: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Solid themed background (no wallpaper image in this edition) */
+:root[data-edition="focus"] body { background: var(--app-bg); }
+:root[data-edition="focus"] .App {
+  background: var(--app-bg) !important;
+  background-image: none !important;
+}
+:root[data-edition="focus"] .app-scrim { display: none; }
+
+/* Note: the hand-drawn tilt (rotate(...)) is combined with translate used for
+   dragging/sliding, so it's cleared in JS per-component rather than with a
+   blanket transform override that would break positioning. */
+
+/* Hide any remaining tape elements outright */
+:root[data-edition="focus"] .tape { display: none !important; }
+
+/* Headings: clean weight, no wavy underline */
+:root[data-edition="focus"] h1,
+:root[data-edition="focus"] h2,
+:root[data-edition="focus"] h3,
+:root[data-edition="focus"] .panel-title {
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  text-decoration: none !important;
+}
+
+/* Softer, flatter panels overall */
+:root[data-edition="focus"] #chatPanel,
+:root[data-edition="focus"] .note-panel,
+:root[data-edition="focus"] .planner-panel,
+:root[data-edition="focus"] .timer-panel,
+:root[data-edition="focus"] .library-panel,
+:root[data-edition="focus"] .drop-panel {
+  border: 1px solid var(--paper-shade);
+}
+
+/* ---- Compact utility dock (replaces the music pill in Focus) ---- */
+#musicPlayer.mp-focus {
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  min-width: 0;
+  padding: 7px 10px;
+  background: var(--paper-tint);
+  border: 1px solid var(--paper-shade);
+  border-radius: 999px;
+  box-shadow: var(--shadow-pencil-sm);
+  display: flex;
+  align-items: center;
+}
+#musicPlayer.mp-focus .mp-utility { display: flex; gap: 4px; }

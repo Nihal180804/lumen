@@ -35,6 +35,7 @@ export function MusicPlayer({
   ambientMix,
   onToggleAmbient,
   onAmbientVol,
+  isFocus,
 }) {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -79,6 +80,28 @@ export function MusicPlayer({
     if (audioRef.current) audioRef.current.currentTime = v;
     setCurrent(v);
   };
+
+  // Focus edition: no music or ambience — just the utility dock (panel toggles).
+  if (isFocus) {
+    return (
+      <div id="musicPlayer" className="mp-focus">
+        <div className="mp-utility">
+          {UTILITY_ITEMS.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              className={`mp-util-btn${panels[it.key] ? ' is-active' : ''}`}
+              onClick={() => toggle(it.key)}
+              title={it.label}
+              aria-label={it.label}
+              aria-pressed={panels[it.key]}
+            >{it.icon}</button>
+          ))}
+          <button type="button" className="mp-util-btn" onClick={toggleFullscreen} title="Fullscreen" aria-label="Fullscreen">⛶</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="musicPlayer">

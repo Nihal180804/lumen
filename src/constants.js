@@ -8,6 +8,10 @@ const ASSET = process.env.PUBLIC_URL || '';
 // The Lite build ships a small subset of media; the rest is offered as
 // downloadable packs. The two must stay in sync with scripts/strip-lite-assets.js.
 const EDITION = process.env.REACT_APP_EDITION || 'full';
+// Focus — the minimal, use-focused edition: no music, no wallpapers, clean
+// dual-tone themes. Ships as its own installer alongside full/lite.
+export const IS_FOCUS = EDITION === 'focus';
+export const EDITION_NAME = EDITION;
 const LITE_MUSIC = ['lofi1.mp3', 'lofi2.mp3'];
 const LITE_WALLPAPERS = ['background6.gif', 'cozy-sofa.png', 'elf-kingdom.jpg'];
 
@@ -32,14 +36,14 @@ const ALL_BACKGROUNDS = [
   { file: 'elf-kingdom.jpg', name: 'Elf Kingdom' },
 ];
 
-export const TRACKS = (EDITION === 'lite'
+export const TRACKS = IS_FOCUS ? [] : (EDITION === 'lite'
   ? ALL_TRACKS.filter((t) => LITE_MUSIC.includes(t.file))
   : ALL_TRACKS
 ).map(({ src, name }) => ({ src, name }));
 
-export const BACKGROUNDS = EDITION === 'lite'
+export const BACKGROUNDS = IS_FOCUS ? [] : (EDITION === 'lite'
   ? ALL_BACKGROUNDS.filter((b) => LITE_WALLPAPERS.includes(b.file))
-  : ALL_BACKGROUNDS;
+  : ALL_BACKGROUNDS);
 
 // Default wallpaper — must exist in every edition, so it's one of the Lite set.
 export const DEFAULT_BACKGROUND = `${ASSET}/images/cozy-sofa.png`;

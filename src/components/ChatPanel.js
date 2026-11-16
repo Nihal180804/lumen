@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { IS_FOCUS } from '../constants';
 import './ChatPanel.css';
+
+const TILT = IS_FOCUS ? '' : ' rotate(-0.6deg)'; // no hand-drawn tilt in Focus
 
 const RAG_BASE = (typeof window !== 'undefined' && window.bookshelf && window.bookshelf.ragBase)
   || process.env.REACT_APP_RAG_BASE || 'http://localhost:5001';
@@ -55,7 +58,7 @@ function AnswerText({ content, citations, onJump }) {
   );
 }
 
-export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
+export default function ChatPanel({ open, onToggle, onOpenSettings, onCite, notes }) {
   const [books, setBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState('');
   const [messages, setMessages] = useState([]);
@@ -162,7 +165,7 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
       const r = await fetch(`${RAG_BASE}/api/rag/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId: selectedBook, question: q, history }),
+        body: JSON.stringify({ bookId: selectedBook, question: q, history, notes: notes || '' }),
       });
       if (!r.ok) throw new Error(await r.text());
       const reader = r.body.getReader();
@@ -328,8 +331,8 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite }) {
           [side]: '18px',
           [side === 'left' ? 'right' : 'left']: 'auto',
           transform: open
-            ? 'translateX(0) rotate(-0.6deg)'
-            : `translateX(${side === 'left' ? 'calc(-100% - 34px)' : 'calc(100% + 34px)'}) rotate(-0.6deg)`,
+            ? `translateX(0)${TILT}`
+            : `translateX(${side === 'left' ? 'calc(-100% - 34px)' : 'calc(100% + 34px)'})${TILT}`,
           opacity: open ? 1 : 0,
           pointerEvents: open ? 'auto' : 'none',
         }}
