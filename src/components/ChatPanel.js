@@ -422,7 +422,7 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite, note
           </div>
         )}
         {messages.map((m, i) => {
-          const jump = (c) => onCite && onCite(c.bookId || selectedBook, c.snippet, c.page);
+          const jump = (c) => { if (c.source === 'notes') return; onCite && onCite(c.bookId || selectedBook, c.snippet, c.page); };
           if (m.kind === 'quiz') {
             return <QuizCard key={i} title={m.title} quiz={m.quiz} status={m.status} error={m.error} />;
           }
@@ -448,10 +448,12 @@ export default function ChatPanel({ open, onToggle, onOpenSettings, onCite, note
                     type="button"
                     className="chat-cite-item"
                     onClick={() => jump(c)}
-                    title={c.page ? `Go to page ${c.page}` : 'Show this passage in the PDF'}
+                    title={c.source === 'notes' ? 'From your own notes' : (c.page ? `Go to page ${c.page}` : 'Show this passage in the PDF')}
                   >
                     <span className="chat-cite-num">[{c.label}]</span>
-                    {c.page ? <span className="chat-cite-page">p.{c.page}</span> : null}
+                    {c.source === 'notes'
+                      ? <span className="chat-cite-note">📝 your note</span>
+                      : (c.page ? <span className="chat-cite-page">p.{c.page}</span> : null)}
                     {selectedBook === ALL_BOOKS && c.bookName
                       ? <span className="chat-cite-book">{c.bookName.replace(/\.pdf$/i, '')}</span> : null}
                     {c.snippet}…

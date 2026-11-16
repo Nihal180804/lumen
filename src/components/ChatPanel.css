@@ -324,6 +324,17 @@
   font-weight: 700;
   font-style: normal;
 }
+.chat-cite-note {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--sage-soft);
+  color: var(--ink);
+  font-weight: 700;
+  font-style: normal;
+  white-space: nowrap;
+}
 /* Inline [n] markers inside an answer — click to jump to the source page. */
 .chat-cite-mark {
   cursor: pointer;
