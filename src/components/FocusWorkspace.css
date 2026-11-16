@@ -1,0 +1,122 @@
+/* Lumen Focus — tiled, resizable workspace (sessions · Notes · PDF · Assistant) */
+
+.fw-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background: var(--app-bg, #16181d);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* ── Sessions rail ── */
+.fw-rail {
+  flex: 0 0 auto;
+  width: 212px;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-right: 1px solid var(--paper-shade);
+  min-height: 0;
+}
+.fw-rail.collapsed { width: 48px; align-items: center; }
+.fw-rail-top { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px; }
+.fw-rail-toggle, .fw-rail-add {
+  background: none; border: none; color: var(--ink-soft); cursor: pointer;
+  font-size: 16px; padding: 4px 6px; border-radius: 7px; line-height: 1;
+}
+.fw-rail-toggle:hover, .fw-rail-add:hover { background: var(--paper-warm); color: var(--ink); }
+.fw-rail-title { flex: 1; font-weight: 800; font-size: 13px; letter-spacing: -0.2px; }
+.fw-rail-list { flex: 1; overflow-y: auto; padding: 2px 8px; min-height: 0; }
+.fw-sess {
+  display: flex; align-items: center; gap: 4px; padding: 4px 6px; margin-bottom: 3px;
+  border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+}
+.fw-sess:hover { background: var(--paper-warm); }
+.fw-sess.active { background: var(--coral-soft); border-color: var(--coral); }
+.fw-sess-name {
+  flex: 1; min-width: 0; background: none; border: none; color: var(--ink);
+  font-family: var(--font-body); font-size: 12.5px; padding: 3px 2px; outline: none; cursor: text;
+}
+.fw-sess.active .fw-sess-name { font-weight: 700; }
+.fw-sess-del { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 11px; padding: 2px 4px; opacity: 0; }
+.fw-sess:hover .fw-sess-del { opacity: 1; }
+.fw-sess-del:hover { color: var(--coral); }
+.fw-rail-foot { padding: 10px; border-top: 1px solid var(--paper-shade); }
+.fw-rail-foot button {
+  width: 100%; background: var(--paper-warm); border: 1px solid var(--paper-shade); color: var(--ink-soft);
+  padding: 7px; border-radius: 8px; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 600;
+}
+.fw-rail-foot button:hover { color: var(--ink); border-color: var(--coral); }
+
+/* ── Main tiled area ── */
+.fw-main { flex: 1 1 auto; display: flex; min-width: 0; padding: 10px; gap: 0; }
+
+.fw-pane {
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+  background: var(--paper);
+  border: 1px solid var(--paper-shade);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fw-pane-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-bottom: 1px solid var(--paper-shade);
+  font-weight: 800; font-size: 12px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-soft);
+  flex: 0 0 auto;
+}
+
+/* Resizer handles between panes */
+.fw-resizer {
+  flex: 0 0 10px; cursor: col-resize; align-self: stretch;
+  position: relative;
+}
+.fw-resizer::after {
+  content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 2px; height: 28px; border-radius: 2px; background: var(--paper-shade); transition: background .15s;
+}
+.fw-resizer:hover::after { background: var(--coral); }
+
+/* Notes */
+.fw-notes-area {
+  flex: 1; width: 100%; resize: none; border: none; outline: none;
+  background: transparent; color: var(--ink); padding: 12px 14px;
+  font-family: var(--font-body); font-size: 14px; line-height: 1.6;
+}
+.fw-notes-area::placeholder { color: var(--ink-faint); }
+
+/* PDF */
+.fw-pdf-controls { display: flex; align-items: center; gap: 6px; text-transform: none; }
+.fw-pdf-controls select, .fw-pdf-controls button {
+  background: var(--paper-warm); border: 1px solid var(--paper-shade); color: var(--ink);
+  border-radius: 7px; padding: 4px 8px; font-family: var(--font-body); font-size: 11.5px; cursor: pointer;
+}
+.fw-pdf-controls select { max-width: 160px; }
+.fw-pdf-body { flex: 1; min-height: 0; overflow: hidden; position: relative; display: flex; }
+.fw-pdf-body > * { flex: 1; min-height: 0; }
+
+/* Assistant (RAG) */
+.fw-ragcol .fw-rag { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.fw-rag-scroll { flex: 1; overflow-y: auto; padding: 12px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.fw-msg { font-size: 13px; line-height: 1.6; }
+.fw-msg.user { align-self: flex-end; max-width: 90%; background: var(--coral-soft); color: var(--ink); padding: 7px 11px; border-radius: 12px 12px 4px 12px; font-weight: 600; }
+.fw-msg.assistant { color: var(--ink); }
+.fw-cref { color: var(--coral); cursor: default; font-size: 0.72em; vertical-align: super; font-weight: 700; padding: 0 1px; }
+.fw-cites { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; }
+.fw-cite { font-size: 10px; color: var(--ink-faint); background: var(--paper-warm); border: 1px solid var(--paper-shade); border-radius: 6px; padding: 1px 6px; }
+.fw-cite.note { color: var(--ink); background: var(--sage-soft); }
+.fw-empty { color: var(--ink-faint); font-size: 12.5px; text-align: center; margin: auto; padding: 24px; line-height: 1.7; }
+.fw-link { background: none; border: none; color: var(--coral); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
+
+.fw-rag-input { display: flex; gap: 7px; padding: 10px; border-top: 1px solid var(--paper-shade); flex: 0 0 auto; }
+.fw-rag-input input {
+  flex: 1; background: var(--app-bg); border: 1px solid var(--paper-shade); border-radius: 9px; padding: 8px 11px;
+  color: var(--ink); font-family: var(--font-body); font-size: 13px; outline: none;
+}
+.fw-rag-input input:focus { border-color: var(--coral); }
+.fw-rag-input button {
+  background: var(--coral); color: var(--on-accent); border: none; border-radius: 9px; padding: 0 15px;
+  font-weight: 700; cursor: pointer; font-family: var(--font-body); font-size: 12.5px;
+}
+.fw-rag-input button:disabled { opacity: 0.4; cursor: not-allowed; }

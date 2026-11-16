@@ -13,6 +13,7 @@ import { Timer } from './components/Timer';
 import SettingsPanel from './components/SettingsPanel';
 import { Tutorial } from './components/Tutorial';
 import ChatPanel from './components/ChatPanel';
+import FocusWorkspace from './components/FocusWorkspace';
 import { useReadingStats } from './hooks/useReadingStats';
 import { setAmbient, AMBIENT_SOUNDS } from './audio/ambient';
 import { DEFAULT_THEME } from './theme';
@@ -344,7 +345,28 @@ function App() {
   };
 
   return (
-    <div style={IS_FOCUS ? undefined : { backgroundImage: `url(${background})` }} className="App">
+    IS_FOCUS ? (
+    <>
+      <FocusWorkspace
+        theme={theme} setTheme={setTheme} mode={mode} setMode={setMode}
+        onOpenSettings={() => openSettings('appearance')}
+      />
+      {panels.settings && (
+        <SettingsPanel
+          initialTab={settingsTab}
+          onClose={() => togglePanel('settings')}
+          theme={theme} setTheme={setTheme} mode={mode} setMode={setMode}
+          wallpapers={[]} currentWallpaper=""
+          onSelectWallpaper={() => {}} onAddWallpaper={() => {}} onRemoveWallpaper={() => {}}
+          tracks={[]} onAddMusic={() => {}} onRemoveMusic={() => {}}
+          ambientMix={{}} userAmbient={[]} onToggleAmbient={() => {}} onAmbientVol={() => {}}
+          onAddAmbient={() => {}} onRemoveAmbient={() => {}}
+          onReplayTutorial={() => {}}
+        />
+      )}
+    </>
+    ) : (
+    <div style={{ backgroundImage: `url(${background})` }} className="App">
       <div className="app-scrim" aria-hidden="true" />
 
       <MusicPlayer
@@ -459,9 +481,10 @@ function App() {
         onToggle={() => togglePanel('chat')}
         onOpenSettings={() => openSettings('ai')}
         onCite={handleCite}
-        notes={IS_FOCUS ? notes : undefined}
+        notes={notes}
       />
     </div>
+    )
   );
 }
 
